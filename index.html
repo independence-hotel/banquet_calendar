@@ -6,81 +6,122 @@
     <title>Banquet Event Calendar Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .modal { display: none; }
-        .modal.active { display: flex; }
+        .modal { display: none; opacity: 0; transition: opacity 0.3s ease; }
+        .modal.active { display: flex; opacity: 1; }
+        
+        /* Custom Animation for Cards */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.5s ease-out forwards;
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-slate-800 font-sans">
-    <!-- Navbar -->
-    <nav class="bg-blue-900 text-white p-4 shadow-md flex justify-between items-center">
-        <h1 class="text-xl font-bold">F&B Banquet Dashboard</h1>
-        <div class="space-x-4">
-            <button class="bg-white text-blue-900 px-4 py-2 rounded font-semibold hover:bg-blue-100" onclick="window.print()">Export PDF</button>
+    
+    <!-- Navbar / Header -->
+    <nav class="bg-blue-900 text-white p-4 shadow-md relative flex justify-between items-center h-24 overflow-hidden">
+        <!-- Centered Title -->
+        <h1 class="absolute w-full left-0 text-center font-bold tracking-wider" style="font-size: 35px; pointer-events: none;">
+            INDEPENDENCE HOTEL | F&B BANQUET DASHBOARD
+        </h1>
+        
+        <!-- Right Action Buttons (z-index ensure it stays clickable above the absolute title) -->
+        <div class="ml-auto z-10 flex space-x-4">
+            <button class="px-4 py-2 bg-blue-700 text-white rounded font-semibold shadow hover:bg-blue-600 transition duration-300" onclick="fetchEvents()">🔄 Refresh Data</button>
+            <button class="bg-white text-blue-900 px-4 py-2 rounded font-semibold shadow hover:bg-blue-100 transition duration-300" onclick="window.print()">🖨️ Export PDF</button>
         </div>
     </nav>
 
     <!-- Main Container -->
     <div class="container mx-auto mt-8 p-4">
-        <!-- Controls -->
-        <div class="flex justify-between items-center mb-6">
-            <div class="flex space-x-2">
-                <button class="px-4 py-2 bg-blue-800 text-white rounded shadow hover:bg-blue-700" onclick="fetchEvents()">Refresh Data</button>
-            </div>
-            <div class="flex space-x-4">
-                <select id="venueFilter" class="border p-2 rounded text-gray-700" onchange="renderEvents()">
-                    <option value="all">All Venues</option>
-                    <option value="coral">Coral</option>
-                    <option value="sunset">Sunset</option>
-                    <option value="camelia">Camelia Room</option>
-                    <option value="hibiscus">Hibiscus Room</option>
-                    <option value="jasmine">Jasmine Room</option>
+        
+        <!-- Filter Controls Area -->
+        <div class="bg-white p-4 rounded-lg shadow-sm border mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                
+                <!-- 1. Date Range Filter -->
+                <select id="dateFilter" class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition" onchange="toggleDateRange(); renderEvents();">
+                    <option value="all">📅 All Dates</option>
+                    <option value="this_week">📅 This Week (Next 7 Days)</option>
+                    <option value="this_month">📅 This Month</option>
+                    <option value="custom">📅 Custom Date Range</option>
                 </select>
+
+                <!-- Custom Date Inputs (Hidden by default) -->
+                <div id="customDateWrap" class="hidden flex space-x-2 lg:col-span-2">
+                    <input type="date" id="startDate" class="border p-2 rounded text-gray-700 w-full" onchange="renderEvents()">
+                    <span class="self-center text-gray-500">to</span>
+                    <input type="date" id="endDate" class="border p-2 rounded text-gray-700 w-full" onchange="renderEvents()">
+                </div>
+
+                <!-- 2. Status Filter -->
+                <select id="statusFilter" class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition" onchange="renderEvents()">
+                    <option value="all">✅ All Events</option>
+                    <option value="confirmed">🟢 Confirmed Group Only</option>
+                    <option value="unconfirmed">🟠 All Unconfirmed Status</option>
+                </select>
+
+                <!-- 3. Venue Filter -->
+                <select id="venueFilter" class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition" onchange="renderEvents()">
+                    <option value="all">📍 All Venues</option>
+                    <option value="hibiscus">Hibiscus Room</option>
+                    <option value="camellia">Camellia Room</option>
+                    <option value="jasmine">Jasmine Room</option>
+                    <option value="champa">Champa Room</option>
+                    <option value="sky pool">Sky Pool & Poolside Terrace</option>
+                    <option value="sunset">Sunset Restaurant & Terrace</option>
+                    <option value="coral">Coral Restaurant</option>
+                    <option value="history">History Bar</option>
+                    <option value="beach">Beach</option>
+                </select>
+                
             </div>
         </div>
 
         <!-- Event List View -->
-        <div class="bg-white shadow rounded-lg p-6">
-            <h2 class="text-2xl font-bold mb-4 text-blue-900">Upcoming Events</h2>
-            <div id="eventContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div class="col-span-full text-center py-8">
-                    <div class="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-blue-600 rounded-full" role="status" aria-label="loading"></div>
-                    <p class="mt-2 text-gray-500">Loading events from Google Sheets...</p>
+        <div class="bg-white shadow rounded-lg p-6 min-h-[400px]">
+            <div id="eventContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                <div class="col-span-full text-center py-12">
+                    <div class="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-blue-600 rounded-full" role="status"></div>
+                    <p class="mt-2 text-gray-500 font-medium">Loading events from Google Sheets...</p>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Modal for Event Details -->
-    <div id="eventModal" class="modal fixed inset-0 bg-black bg-opacity-50 justify-center items-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl max-w-md w-full m-4">
-            <h3 id="modalTitle" class="text-2xl font-bold text-blue-900 mb-2">Event Name</h3>
-            <p id="modalDate" class="text-gray-600 mb-4 font-semibold"></p>
-            <div class="space-y-3 mb-6 bg-gray-50 p-4 rounded-lg">
-                <p class="flex justify-between"><strong>Res. Code:</strong> <span id="modalCode" class="text-gray-700"></span></p>
-                <p class="flex justify-between"><strong>Venue:</strong> <span id="modalVenue" class="text-gray-700"></span></p>
-                <p class="flex justify-between"><strong>Pax:</strong> <span id="modalPax" class="text-gray-700"></span></p>
-                <p class="flex justify-between"><strong>Event Type:</strong> <span id="modalType" class="text-gray-700"></span></p>
-                <p class="flex justify-between"><strong>Status:</strong> <span id="modalStatus" class="font-bold"></span></p>
+    <div id="eventModal" class="modal fixed inset-0 bg-black bg-opacity-60 justify-center items-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full m-4 transform scale-100 transition-transform duration-300">
+            <h3 id="modalTitle" class="text-2xl font-bold text-blue-900 mb-2 border-b pb-2">Event Name</h3>
+            <p id="modalDate" class="text-gray-600 mb-4 font-semibold mt-2"></p>
+            <div class="space-y-3 mb-6 bg-gray-50 p-4 rounded-lg border">
+                <p class="flex justify-between border-b pb-1"><strong>Res. Code:</strong> <span id="modalCode" class="text-gray-700"></span></p>
+                <p class="flex justify-between border-b pb-1"><strong>Venue:</strong> <span id="modalVenue" class="text-gray-700 text-right"></span></p>
+                <p class="flex justify-between border-b pb-1"><strong>Pax:</strong> <span id="modalPax" class="text-gray-700"></span></p>
+                <p class="flex justify-between border-b pb-1"><strong>Event Type:</strong> <span id="modalType" class="text-gray-700 text-right"></span></p>
+                <p class="flex justify-between"><strong>Status:</strong> <span id="modalStatus" class="font-bold uppercase tracking-wider"></span></p>
             </div>
-            <button class="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded w-full font-bold transition-colors" onclick="closeModal()">Close</button>
+            <button class="bg-blue-900 hover:bg-blue-800 text-white px-4 py-3 rounded-lg w-full font-bold transition-colors shadow-md" onclick="closeModal()">Close Details</button>
         </div>
     </div>
 
     <script>
-        // ⚠️ ប្តូរ URL ខាងក្រោមទៅជា URL ថ្មីដែលបាន Deploy ពី Apps Script (ត្រូវបញ្ចប់ដោយ /exec)
+        // ⚠️ ប្តូរ URL ខាងក្រោមទៅជា URL Web App របស់លោក
         const API_URL = 'https://script.google.com/macros/s/AKfycbw1F7SsSLEazvkYlZ0RZZ3D7Xzu8heAJh8xYBEQx5bB6WSkejYVY6jDJJrmqy9DdZVN4g/exec';
         let eventsData = [];
 
         async function fetchEvents() {
             const container = document.getElementById('eventContainer');
             container.innerHTML = `
-                <div class="col-span-full text-center py-8">
+                <div class="col-span-full text-center py-12">
                     <div class="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-blue-600 rounded-full"></div>
-                    <p class="mt-2 text-gray-500">Refreshing data...</p>
+                    <p class="mt-2 text-gray-500 font-medium">Refreshing data...</p>
                 </div>`;
 
             try {
-                // ប្រើ redirect: 'follow' សម្រាប់ Google Script
                 const response = await fetch(API_URL, { redirect: 'follow' });
                 if (!response.ok) throw new Error('Network response was not ok');
                 eventsData = await response.json();
@@ -90,32 +131,79 @@
                 renderEvents();
             } catch (error) {
                 console.error('Fetch error:', error);
-                container.innerHTML = `<div class="col-span-full bg-red-50 p-4 rounded-lg text-red-600 text-center font-semibold">❌ Error loading data. Please check if the Google Script URL is correct and deployed as 'Anyone'.</div>`;
+                container.innerHTML = `<div class="col-span-full bg-red-50 p-6 rounded-lg text-red-600 text-center font-semibold border border-red-200 shadow-sm">❌ Error loading data. Please check if the Google Script URL is correct.</div>`;
+            }
+        }
+
+        // បង្ហាញ ឬ លាក់ការរើសថ្ងៃខែ (Custom Date Range)
+        function toggleDateRange() {
+            const dateFilter = document.getElementById('dateFilter').value;
+            const customWrap = document.getElementById('customDateWrap');
+            if(dateFilter === 'custom') {
+                customWrap.classList.remove('hidden');
+                customWrap.classList.add('lg:col-span-2'); 
+            } else {
+                customWrap.classList.add('hidden');
+                customWrap.classList.remove('lg:col-span-2');
             }
         }
 
         function renderEvents() {
             const container = document.getElementById('eventContainer');
             const venueFilter = document.getElementById('venueFilter').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const dateFilter = document.getElementById('dateFilter').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
             container.innerHTML = '';
 
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const next7Days = new Date(today);
+            next7Days.setDate(today.getDate() + 7);
+
             const filteredEvents = eventsData.filter(ev => {
-                if (venueFilter === 'all') return true;
-                return ev.location.toLowerCase().includes(venueFilter);
+                
+                // 1. ចម្រោះតាម ទីតាំង (Venue)
+                if (venueFilter !== 'all' && !ev.location.toLowerCase().includes(venueFilter)) return false;
+                
+                // 2. ចម្រោះតាម Status
+                const isConfirmed = ev.status.includes('confirm');
+                if (statusFilter === 'confirmed' && !isConfirmed) return false;
+                if (statusFilter === 'unconfirmed' && isConfirmed) return false;
+
+                // 3. ចម្រោះតាម កាលបរិច្ឆេទ (Date Range)
+                if(!ev.date) return false;
+                const evDate = new Date(ev.date);
+                evDate.setHours(0,0,0,0);
+
+                if (dateFilter === 'this_week') {
+                    if (evDate < today || evDate > next7Days) return false;
+                } else if (dateFilter === 'this_month') {
+                    if (evDate.getMonth() !== today.getMonth() || evDate.getFullYear() !== today.getFullYear()) return false;
+                } else if (dateFilter === 'custom') {
+                    if (startDate && evDate < new Date(startDate)) return false;
+                    if (endDate && evDate > new Date(endDate)) return false;
+                }
+
+                return true;
             });
 
             if (filteredEvents.length === 0) {
-                container.innerHTML = `<p class="col-span-full text-center text-gray-500 py-8">No events found for the selected filter.</p>`;
+                container.innerHTML = `
+                <div class="col-span-full flex flex-col items-center justify-center py-12 text-gray-500">
+                    <svg class="w-12 h-12 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <p class="text-lg">No events match your current filters.</p>
+                </div>`;
                 return;
             }
 
             filteredEvents.forEach((ev, index) => {
                 const isConfirmed = ev.status.includes('confirm');
-                // Theme colors (Green for confirmed, Orange for others)
                 const bgColor = isConfirmed ? 'bg-green-50 border-green-500' : 'bg-orange-50 border-orange-400';
                 const badgeColor = isConfirmed ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800';
 
-                // Format Date nicely
                 let displayDate = "TBA";
                 if(ev.date) {
                     const d = new Date(ev.date);
@@ -123,22 +211,25 @@
                 }
 
                 const card = document.createElement('div');
-                card.className = `border-l-4 p-5 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-all duration-200 ${bgColor}`;
+                // បញ្ចូល Animation Class និង Delay
+                card.className = `border-l-4 p-5 rounded-lg shadow cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-300 animate-fade-in-up ${bgColor}`;
+                card.style.opacity = '0';
+                card.style.animationDelay = `${index * 0.05}s`; 
                 card.onclick = () => openModal(index, filteredEvents);
                 
                 card.innerHTML = `
-                    <div class="flex justify-between items-start mb-2">
-                        <h4 class="font-bold text-lg text-blue-900 leading-tight flex-1">${ev.groupName}</h4>
+                    <div class="flex justify-between items-start mb-3">
+                        <h4 class="font-bold text-lg text-blue-900 leading-tight flex-1 pr-2">${ev.groupName || 'Unnamed Event'}</h4>
                     </div>
-                    <p class="text-sm text-gray-600 font-medium mb-1 flex items-center">
-                        📅 ${displayDate} | ⏰ ${ev.time}
+                    <p class="text-sm text-gray-700 font-medium mb-1.5 flex items-center">
+                        📅 <span class="ml-2">${displayDate}</span> <span class="mx-2 text-gray-300">|</span> ⏰ <span>${ev.time}</span>
                     </p>
-                    <p class="text-sm text-gray-600 mb-3 flex items-center">
-                        📍 ${ev.location || 'TBA'} 
+                    <p class="text-sm text-gray-700 mb-4 flex items-start">
+                        📍 <span class="ml-2 leading-snug">${ev.location || 'TBA'}</span> 
                     </p>
-                    <div class="flex justify-between items-center mt-2">
-                        <span class="text-xs font-semibold px-2.5 py-1 rounded ${badgeColor}">${ev.status.toUpperCase() || 'NO STATUS'}</span>
-                        <span class="text-sm font-medium text-gray-500">👥 ${ev.pax || '?'}</span>
+                    <div class="flex justify-between items-center mt-auto border-t pt-3">
+                        <span class="text-xs font-bold px-3 py-1.5 rounded uppercase tracking-wide ${badgeColor}">${ev.status || 'NO STATUS'}</span>
+                        <span class="text-sm font-semibold text-gray-600 bg-white px-2 py-1 rounded border shadow-sm">👥 Pax: ${ev.pax || '?'}</span>
                     </div>
                 `;
                 container.appendChild(card);
@@ -148,29 +239,36 @@
         function openModal(index, dataArray) {
             const ev = dataArray[index];
             
-            // Format Date for Modal
             let displayDate = "TBA";
             if(ev.date) {
                 const d = new Date(ev.date);
-                if(!isNaN(d)) displayDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+                if(!isNaN(d)) displayDate = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
             }
 
-            document.getElementById('modalTitle').innerText = ev.groupName;
+            document.getElementById('modalTitle').innerText = ev.groupName || 'Unnamed Event';
             document.getElementById('modalDate').innerText = `📅 ${displayDate} | ⏰ ${ev.time}`;
             document.getElementById('modalCode').innerText = ev.reservationCode || 'N/A';
             document.getElementById('modalVenue').innerText = ev.location || 'TBA';
             document.getElementById('modalPax').innerText = ev.pax || 'TBA';
             document.getElementById('modalType').innerText = ev.type || 'N/A';
-            document.getElementById('modalStatus').innerText = ev.status.toUpperCase() || 'UNKNOWN';
+            document.getElementById('modalStatus').innerText = ev.status || 'UNKNOWN';
             
             const isConfirmed = ev.status.includes('confirm');
-            document.getElementById('modalStatus').className = isConfirmed ? 'text-green-600 font-bold' : 'text-orange-500 font-bold';
+            document.getElementById('modalStatus').className = isConfirmed ? 'text-green-600 font-bold uppercase tracking-wider' : 'text-orange-500 font-bold uppercase tracking-wider';
 
             document.getElementById('eventModal').classList.add('active');
         }
 
         function closeModal() {
             document.getElementById('eventModal').classList.remove('active');
+        }
+
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('eventModal');
+            if (event.target == modal) {
+                closeModal();
+            }
         }
 
         // Fetch data on load
