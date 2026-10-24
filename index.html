@@ -17,65 +17,119 @@
         .animate-fade-in-up {
             animation: fadeInUp 0.5s ease-out forwards;
         }
+
+        /* ==========================================
+           PRINT STYLES (For A4 Landscape PDF Export)
+           ========================================== */
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 8mm; /* Margin ល្មមសម្រាប់ A4 ផ្តេក */
+            }
+            
+            body {
+                background-color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                font-size: 12px !important;
+            }
+
+            /* លាក់ Navbar និង Filter ពេល Print */
+            nav, #filterArea, button, .modal, .animate-spin {
+                display: none !important;
+            }
+
+            .container {
+                margin: 0 !important;
+                padding: 0 !important;
+                max-width: 100% !important;
+            }
+
+            /* ចំណងជើងពេល Print លើក្រដាស */
+            .container::before {
+                content: "INDEPENDENCE HOTEL | F&B BANQUET DASHBOARD (PRINTED REPORT)";
+                display: block;
+                text-align: center;
+                font-size: 22px;
+                font-weight: bold;
+                color: #1e3a8a;
+                margin-bottom: 15px;
+                border-bottom: 2px solid #1e3a8a;
+                padding-bottom: 10px;
+                text-transform: uppercase;
+            }
+
+            /* តម្រៀបជា ៣ ជួរស្អាត សម្រាប់ A4 ផ្តេក */
+            #eventContainer {
+                display: grid !important;
+                grid-template-columns: repeat(3, 1fr) !important; 
+                gap: 12px !important;
+            }
+
+            /* ការពារកុំឲ្យដាច់ Card ពាក់កណ្តាលក្រដាស */
+            #eventContainer > div {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                box-shadow: inset 0 0 0 1px #e2e8f0 !important;
+                border: 1px solid #cbd5e1 !important;
+                border-left-width: 5px !important;
+                animation: none !important;
+                transform: none !important;
+                opacity: 1 !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-slate-800 font-sans">
     
     <!-- Navbar / Header -->
     <nav class="bg-blue-900 text-white p-4 shadow-md relative flex justify-between items-center h-24 overflow-hidden">
-        <!-- Centered Title -->
-        <h1 class="absolute w-full left-0 text-center font-bold tracking-wider" style="font-size: 35px; pointer-events: none;">
+        <h1 class="absolute w-full left-0 text-center font-bold tracking-wider uppercase" style="font-size: 35px; pointer-events: none;">
             INDEPENDENCE HOTEL | F&B BANQUET DASHBOARD
         </h1>
-        
-        <!-- Right Action Buttons -->
         <div class="ml-auto z-10 flex space-x-4">
-            <button class="px-4 py-2 bg-blue-700 text-white rounded font-semibold shadow hover:bg-blue-600 transition duration-300" onclick="fetchEvents()">🔄 Refresh Data</button>
-            <button class="bg-white text-blue-900 px-4 py-2 rounded font-semibold shadow hover:bg-blue-100 transition duration-300" onclick="window.print()">🖨️ Export PDF</button>
+            <button class="px-4 py-2 bg-blue-700 text-white rounded font-semibold shadow hover:bg-blue-600 transition duration-300 flex items-center" onclick="fetchEvents()">🔄 Refresh Data</button>
+            <button class="bg-white text-blue-900 px-4 py-2 rounded font-semibold shadow hover:bg-blue-100 transition duration-300 flex items-center" onclick="window.print()">🖨️ Export PDF</button>
         </div>
     </nav>
 
     <!-- Main Container -->
-    <div class="container mx-auto mt-8 p-4">
+    <div class="container mx-auto mt-6 p-4">
         
         <!-- Filter Controls Area -->
-        <div class="bg-white p-4 rounded-lg shadow-sm border mb-6">
+        <div id="filterArea" class="bg-white p-4 rounded-lg shadow-sm border mb-6">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 
-                <!-- 1. Search Box -->
                 <input type="text" id="searchFilter" placeholder="🔍 Search Group Name..." class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition lg:col-span-1" onkeyup="renderEvents()">
 
-                <!-- 2. Date Range Filter -->
+                <!-- DATE FILTER (Default = This Week) -->
                 <select id="dateFilter" class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition lg:col-span-1" onchange="toggleDateRange(); renderEvents();">
                     <option value="all">📅 All Dates</option>
-                    <option value="this_week">📅 This Week (Next 7 Days)</option>
+                    <option value="this_week" selected>📅 This Week (Next 7 Days)</option>
                     <option value="this_month">📅 This Month</option>
                     <option value="custom">📅 Custom Date Range</option>
                 </select>
 
-                <!-- Custom Date Inputs -->
                 <div id="customDateWrap" class="hidden flex space-x-2 lg:col-span-2">
                     <input type="date" id="startDate" class="border p-2 rounded text-gray-700 w-full" onchange="renderEvents()">
-                    <span class="self-center text-gray-500">to</span>
+                    <span class="self-center text-gray-500 font-medium">to</span>
                     <input type="date" id="endDate" class="border p-2 rounded text-gray-700 w-full" onchange="renderEvents()">
                 </div>
 
-                <!-- 3. Status Filter -->
                 <select id="statusFilter" class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition lg:col-span-1" onchange="renderEvents()">
                     <option value="all">✅ All Events</option>
                     <option value="confirmed">🟢 Confirmed Group Only</option>
                     <option value="unconfirmed">🟠 All Unconfirmed Status</option>
                 </select>
 
-                <!-- 4. Venue Filter -->
                 <select id="venueFilter" class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition lg:col-span-1" onchange="renderEvents()">
                     <option value="all">📍 All Venues</option>
                     <option value="hibiscus">Hibiscus Room</option>
                     <option value="camellia">Camellia Room</option>
                     <option value="jasmine">Jasmine Room</option>
                     <option value="champa">Champa Room</option>
-                    <option value="sky pool">Sky Pool & Poolside Terrace</option>
-                    <option value="sunset">Sunset Restaurant & Terrace</option>
+                    <option value="sky pool">Sky Pool & Poolside</option>
+                    <option value="sunset">Sunset Restaurant</option>
                     <option value="coral">Coral Restaurant</option>
                     <option value="history">History Bar</option>
                     <option value="beach">Beach</option>
@@ -85,9 +139,9 @@
         </div>
 
         <!-- Event List View -->
-        <div class="bg-white shadow rounded-lg p-6 min-h-[400px]">
+        <div class="bg-white shadow rounded-lg p-6 min-h-[400px]" style="box-shadow: none; border: none; padding: 0;">
             <div id="eventContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                <!-- Initial Loading Text -->
+                <!-- Loader Placeholder -->
                 <div class="col-span-full text-center py-12">
                     <div class="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-blue-600 rounded-full" role="status"></div>
                     <p class="mt-2 text-gray-500 font-medium">Loading events from Google Sheets...</p>
@@ -98,14 +152,14 @@
 
     <!-- Modal for Event Details -->
     <div id="eventModal" class="modal fixed inset-0 bg-black bg-opacity-60 justify-center items-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full m-4 transform scale-100 transition-transform duration-300">
+        <div class="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full m-4 transform scale-100 transition-transform duration-300 relative">
+            <button class="absolute top-4 right-4 text-gray-400 hover:text-red-500 font-bold text-xl" onclick="closeModal()">✕</button>
             <h3 id="modalTitle" class="text-2xl font-bold text-blue-900 mb-2 border-b pb-2">Event Name</h3>
             <p id="modalDate" class="text-gray-600 mb-4 font-semibold mt-2"></p>
             <div class="space-y-3 mb-6 bg-gray-50 p-4 rounded-lg border">
                 <p class="flex justify-between border-b pb-1"><strong>Res. Code:</strong> <span id="modalCode" class="text-gray-700"></span></p>
-                <p class="flex justify-between border-b pb-1"><strong>Venue:</strong> <span id="modalVenue" class="text-gray-700 text-right"></span></p>
-                <p class="flex justify-between border-b pb-1"><strong>Pax:</strong> <span id="modalPax" class="text-gray-700"></span></p>
-                <p class="flex justify-between border-b pb-1"><strong>Event Type:</strong> <span id="modalType" class="text-gray-700 text-right"></span></p>
+                <p class="flex justify-between border-b pb-1"><strong>Venue & Type:</strong> <span id="modalVenue" class="text-gray-700 text-right font-medium"></span></p>
+                <p class="flex justify-between border-b pb-1"><strong>Pax:</strong> <span id="modalPax" class="text-gray-700 font-bold bg-white px-2 border rounded"></span></p>
                 <p class="flex justify-between"><strong>Status:</strong> <span id="modalStatus" class="font-bold uppercase tracking-wider"></span></p>
             </div>
             <button class="bg-blue-900 hover:bg-blue-800 text-white px-4 py-3 rounded-lg w-full font-bold transition-colors shadow-md" onclick="closeModal()">Close Details</button>
@@ -113,52 +167,48 @@
     </div>
 
     <script>
-        // ----------------------------------------------------
-        // SYSTEM ERROR CATCHER (ដើម្បីបង្ហាញ Error លើអេក្រង់)
-        // ----------------------------------------------------
+        // System Error Catcher - Auto reports any JS bug to screen
         window.onerror = function(message, source, lineno) {
             const container = document.getElementById('eventContainer');
             if (container) {
                 container.innerHTML = `
                 <div class="col-span-full bg-red-100 text-red-800 p-6 rounded-lg text-left border border-red-300">
-                    <h3 class="font-bold text-lg mb-2">❌ ផ្នែកកូដមានបញ្ហា (JavaScript Error):</h3>
-                    <p><strong>Error:</strong> ${message}</p>
+                    <h3 class="font-bold text-lg mb-2">❌ JavaScript Error Detected:</h3>
+                    <p><strong>Message:</strong> ${message}</p>
                     <p><strong>Line:</strong> ${lineno}</p>
-                    <p class="mt-4 text-sm font-semibold">សូមប្រាកដថាលោកបានចុច Select All (Ctrl+A) និង លុបកូដចាស់ចោលទាំងអស់ មុនពេល Paste កូដថ្មីនេះចូល។</p>
                 </div>`;
             }
         };
 
-        // URL ពិតប្រាកដរបស់លោក មិនបាច់កែទេ
         const API_URL = 'https://script.google.com/macros/s/AKfycbw1F7SsSLEazvkYlZ0RZZ3D7Xzu8heAJh8xYBEQx5bB6WSkejYVY6jDJJrmqy9DdZVN4g/exec';
         let eventsData = [];
 
         async function fetchEvents() {
             const container = document.getElementById('eventContainer');
-            // ប្តូរ UI ទៅជា Refreshing ពេលចាប់ផ្តើមដំណើរការ
             container.innerHTML = `
                 <div class="col-span-full text-center py-12">
                     <div class="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-blue-600 rounded-full"></div>
-                    <p class="mt-2 text-gray-500 font-medium">Refreshing data from Server...</p>
+                    <p class="mt-3 text-gray-500 font-medium">Refreshing data from Server...</p>
                 </div>`;
 
             try {
                 const response = await fetch(API_URL, { redirect: 'follow' });
-                if (!response.ok) throw new Error('Network response failed');
+                if (!response.ok) throw new Error('Network response failed: ' + response.status);
                 
                 eventsData = await response.json();
                 
-                // តម្រៀបតាមកាលបរិច្ឆេទ
-                eventsData.sort((a, b) => new Date(a.date) - new Date(b.date));
+                if(Array.isArray(eventsData)) {
+                    eventsData.sort((a, b) => new Date(a.date) - new Date(b.date));
+                }
+                
                 renderEvents();
                 
             } catch (error) {
-                console.error('Fetch error:', error);
                 container.innerHTML = `
                 <div class="col-span-full bg-red-50 p-6 rounded-lg text-red-600 text-center border border-red-200 shadow-sm">
-                    <h3 class="font-bold text-lg mb-1">❌ មិនអាចទាញទិន្នន័យបានទេ</h3>
-                    <p class="text-sm text-gray-700">${error.message}</p>
-                    <p class="text-sm mt-2">សូមពិនិត្យមើល URL របស់ Apps Script ម្តងទៀត។</p>
+                    <h3 class="font-bold text-lg mb-1">❌ Connection Error</h3>
+                    <p class="text-sm mt-2 font-medium">${error.message}</p>
+                    <p class="text-sm mt-1">សូមប្រាកដថា Google Script Web App ត្រូវបានសិទ្ធិជា 'Anyone' និង URL ត្រឹមត្រូវ។</p>
                 </div>`;
             }
         }
@@ -178,7 +228,6 @@
         function renderEvents() {
             const container = document.getElementById('eventContainer');
             
-            // ប្រមូលតម្លៃពី Filter ទាំងអស់ (Safely)
             const searchFilter = (document.getElementById('searchFilter').value || '').toLowerCase();
             const venueFilter = (document.getElementById('venueFilter').value || '').toLowerCase();
             const statusFilter = document.getElementById('statusFilter').value;
@@ -193,62 +242,58 @@
             const next7Days = new Date(today);
             next7Days.setDate(today.getDate() + 7);
 
-            const filteredEvents = eventsData.filter(ev => {
-                
-                // ការពារ Error បើទិន្នន័យពី Sheet មិនមានអក្សរ
+            // Timezone safe parsing for custom dates
+            const filterStart = startDate ? new Date(startDate + "T00:00:00") : null;
+            const filterEnd = endDate ? new Date(endDate + "T23:59:59") : null;
+
+            const filteredEvents = (eventsData || []).filter(ev => {
                 const evGroup = (ev.groupName || '').toString().toLowerCase();
                 const evLoc = (ev.location || '').toString().toLowerCase();
                 const evStatus = (ev.status || '').toString().toLowerCase();
 
-                // 1. ចម្រោះតាម Search Box (Group Name)
                 if (searchFilter && !evGroup.includes(searchFilter)) return false;
-
-                // 2. ចម្រោះតាម ទីតាំង (Venue)
                 if (venueFilter !== 'all' && !evLoc.includes(venueFilter)) return false;
                 
-                // 3. ចម្រោះតាម Status
                 const isConfirmed = evStatus.includes('confirm');
                 if (statusFilter === 'confirmed' && !isConfirmed) return false;
                 if (statusFilter === 'unconfirmed' && isConfirmed) return false;
 
-                // 4. ចម្រោះតាម កាលបរិច្ឆេទ (Date Range)
                 if(!ev.date) return false;
                 const evDate = new Date(ev.date);
                 evDate.setHours(0,0,0,0);
 
-                if (dateFilter === 'this_week') {
-                    if (evDate < today || evDate > next7Days) return false;
-                } else if (dateFilter === 'this_month') {
-                    if (evDate.getMonth() !== today.getMonth() || evDate.getFullYear() !== today.getFullYear()) return false;
-                } else if (dateFilter === 'custom') {
-                    if (startDate && evDate < new Date(startDate)) return false;
-                    if (endDate && evDate > new Date(endDate)) return false;
+                if (dateFilter === 'this_week' && (evDate < today || evDate > next7Days)) return false;
+                if (dateFilter === 'this_month' && (evDate.getMonth() !== today.getMonth() || evDate.getFullYear() !== today.getFullYear())) return false;
+                if (dateFilter === 'custom') {
+                    if (filterStart && evDate < filterStart) return false;
+                    if (filterEnd && evDate > filterEnd) return false;
                 }
 
                 return true;
             });
 
-            // បើគ្មានទិន្នន័យ
             if (filteredEvents.length === 0) {
                 container.innerHTML = `
-                <div class="col-span-full flex flex-col items-center justify-center py-12 text-gray-500">
-                    <svg class="w-12 h-12 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <p class="text-lg">No events match your current filters.</p>
+                <div class="col-span-full flex flex-col items-center justify-center py-16 text-gray-400">
+                    <svg class="w-16 h-16 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <p class="text-xl font-medium text-gray-500">No events match your criteria</p>
                 </div>`;
                 return;
             }
 
-            // បង្ហាញកាតទិន្នន័យ
             filteredEvents.forEach((ev, index) => {
                 const evStatus = (ev.status || '').toString().toLowerCase();
                 const isConfirmed = evStatus.includes('confirm');
                 
+                // Color Logic
                 const bgColor = isConfirmed ? 'bg-green-50 border-green-500' : 'bg-orange-50 border-orange-400';
-                const badgeColor = isConfirmed ? 'bg-green-100 text-green-800 border-green-200' : 'bg-orange-100 text-orange-800 border-orange-200';
+                const badgeColor = isConfirmed ? 'bg-green-100 text-green-800 border-green-300' : 'bg-orange-100 text-orange-800 border-orange-300';
+                const dateTextColor = isConfirmed ? 'text-green-700' : 'text-blue-700';
 
                 let fullDateStr = "TBA";
                 let bigDay = "--";
                 let bigMonth = "";
+                let shortDayName = "---";
 
                 if(ev.date) {
                     const d = new Date(ev.date);
@@ -256,49 +301,59 @@
                         fullDateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
                         bigDay = d.getDate();
                         bigMonth = d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase();
+                        shortDayName = d.toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase();
                     }
                 }
 
+                // Combine Outlet and Event Type Safely
+                let outletString = (ev.location || 'TBA').toString().toUpperCase();
+                let evType = (ev.type || '').toString().trim().toUpperCase();
+                
+                if (evType && evType !== "-" && evType !== "N/A" && evType !== "NULL") {
+                    outletString += ` | ${evType}`;
+                }
+
                 const card = document.createElement('div');
-                card.className = `relative border-l-4 p-5 rounded-lg shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-300 animate-fade-in-up flex flex-col ${bgColor}`;
+                card.className = `relative border-l-[5px] p-5 rounded-lg shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-300 animate-fade-in-up flex flex-col ${bgColor}`;
                 card.style.opacity = '0';
                 card.style.animationDelay = `${index * 0.05}s`; 
                 card.onclick = () => openModal(index, filteredEvents);
                 
                 card.innerHTML = `
-                    <!-- Big Date on Top Right -->
-                    <div class="absolute top-4 right-5 text-center flex flex-col items-center">
-                        <span class="text-3xl font-black text-blue-900 leading-none">${bigDay}</span>
-                        <span class="text-xs font-bold text-gray-500 tracking-widest mt-1">${bigMonth}</span>
+                    <!-- Big Date & Day Name on Top Right -->
+                    <div class="absolute top-4 right-5 text-center flex flex-col items-center justify-center min-w-[55px]">
+                        <span class="text-sm font-extrabold ${dateTextColor} tracking-widest uppercase mb-1">${shortDayName}</span>
+                        <span class="text-4xl font-black text-blue-900 leading-none">${bigDay}</span>
+                        <span class="text-xs font-bold text-gray-500 tracking-widest mt-1.5">${bigMonth}</span>
                     </div>
 
-                    <!-- Card Content (Added pr-16 to avoid overlapping) -->
-                    <div class="pr-16 flex-grow">
-                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">GROUP NAME:</p>
-                        <h4 class="font-bold text-lg text-blue-900 leading-tight mb-4">${ev.groupName || 'Unnamed Event'}</h4>
+                    <!-- Card Content -->
+                    <div class="pr-[70px] flex-grow">
+                        <p class="text-[10px] text-gray-500 font-extrabold uppercase tracking-widest mb-1">GROUP NAME:</p>
+                        <h4 class="font-bold text-lg text-blue-900 leading-tight mb-4 uppercase">${ev.groupName || 'UNNAMED EVENT'}</h4>
                         
-                        <p class="text-sm text-gray-700 mb-2">
-                            <span class="font-bold text-gray-900 uppercase text-xs tracking-wider inline-block w-16">OUTLET:</span> 
-                            <span class="font-medium">${ev.location || 'TBA'}</span>
+                        <p class="text-sm text-gray-700 mb-2 flex items-start">
+                            <span class="font-bold text-gray-900 uppercase text-[11px] tracking-wider inline-block w-[70px] flex-shrink-0 mt-0.5">OUTLET:</span> 
+                            <span class="font-semibold text-gray-800 leading-tight">${outletString}</span>
                         </p>
                         
-                        <p class="text-sm text-gray-700 mb-2">
-                            <span class="font-bold text-gray-900 uppercase text-xs tracking-wider inline-block w-16">DATE:</span> 
-                            <span class="font-medium text-blue-700">${fullDateStr}</span> 
-                            <span class="mx-1 text-gray-300">|</span> 
-                            <span class="font-bold text-gray-900 uppercase text-xs tracking-wider">TIME:</span> 
-                            <span class="font-medium">${ev.time || 'TBA'}</span>
+                        <p class="text-sm text-gray-700 mb-2 flex items-center">
+                            <span class="font-bold text-gray-900 uppercase text-[11px] tracking-wider inline-block w-[70px] flex-shrink-0">DATE:</span> 
+                            <span class="font-semibold text-blue-700">${fullDateStr}</span> 
+                            <span class="mx-2 text-gray-300">|</span> 
+                            <span class="font-bold text-gray-900 uppercase text-[11px] tracking-wider mr-2">TIME:</span> 
+                            <span class="font-semibold text-gray-800">${ev.time || 'TBA'}</span>
                         </p>
 
-                        <p class="text-sm text-gray-700 mb-4">
-                            <span class="font-bold text-gray-900 uppercase text-xs tracking-wider inline-block w-16">PAX:</span> 
-                            <span class="font-medium bg-white px-2 py-0.5 rounded border shadow-sm">${ev.pax || '?'}</span>
+                        <p class="text-sm text-gray-700 mb-4 flex items-center">
+                            <span class="font-bold text-gray-900 uppercase text-[11px] tracking-wider inline-block w-[70px] flex-shrink-0">PAX:</span> 
+                            <span class="font-bold text-gray-800 bg-white px-2.5 py-0.5 rounded border border-gray-200 shadow-sm">${ev.pax || '?'}</span>
                         </p>
                     </div>
 
                     <!-- Bottom Status -->
-                    <div class="mt-auto border-t pt-3">
-                        <span class="text-xs font-bold px-3 py-1 rounded border uppercase tracking-widest inline-block ${badgeColor}">
+                    <div class="mt-auto border-t border-gray-200 pt-3">
+                        <span class="text-xs font-bold px-3 py-1.5 rounded border uppercase tracking-widest inline-block ${badgeColor}">
                             ${ev.status || 'NO STATUS'}
                         </span>
                     </div>
@@ -316,17 +371,21 @@
                 if(!isNaN(d)) displayDate = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
             }
 
-            document.getElementById('modalTitle').innerText = ev.groupName || 'Unnamed Event';
+            let outletString = (ev.location || 'TBA').toString().toUpperCase();
+            let evType = (ev.type || '').toString().trim().toUpperCase();
+            if (evType && evType !== "-" && evType !== "N/A" && evType !== "NULL") {
+                outletString += ` | ${evType}`;
+            }
+
+            document.getElementById('modalTitle').innerText = (ev.groupName || 'UNNAMED EVENT').toUpperCase();
             document.getElementById('modalDate').innerText = `📅 ${displayDate} | ⏰ ${ev.time}`;
             document.getElementById('modalCode').innerText = ev.reservationCode || 'N/A';
-            document.getElementById('modalVenue').innerText = ev.location || 'TBA';
+            document.getElementById('modalVenue').innerText = outletString;
             document.getElementById('modalPax').innerText = ev.pax || 'TBA';
-            document.getElementById('modalType').innerText = ev.type || 'N/A';
             document.getElementById('modalStatus').innerText = ev.status || 'UNKNOWN';
             
-            const evStatus = (ev.status || '').toString().toLowerCase();
-            const isConfirmed = evStatus.includes('confirm');
-            document.getElementById('modalStatus').className = isConfirmed ? 'text-green-600 font-bold uppercase tracking-wider' : 'text-orange-500 font-bold uppercase tracking-wider';
+            const isConfirmed = (ev.status || '').toLowerCase().includes('confirm');
+            document.getElementById('modalStatus').className = isConfirmed ? 'text-green-600 font-bold uppercase tracking-widest' : 'text-orange-500 font-bold uppercase tracking-widest';
 
             document.getElementById('eventModal').classList.add('active');
         }
@@ -335,7 +394,6 @@
             document.getElementById('eventModal').classList.remove('active');
         }
 
-        // Close modal when clicking outside
         window.onclick = function(event) {
             const modal = document.getElementById('eventModal');
             if (event.target == modal) {
@@ -343,7 +401,7 @@
             }
         }
 
-        // ចាប់ផ្តើមទាញទិន្នន័យពេលបើកទំព័រ
+        // Initialize Call
         fetchEvents();
     </script>
 </body>
