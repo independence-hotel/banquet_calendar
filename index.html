@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banquet Event Calendar Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .modal { display: none; }
+        .modal.active { display: flex; }
+    </style>
+</head>
+<body class="bg-gray-50 text-slate-800 font-sans">
+    <!-- Navbar -->
+    <nav class="bg-navy-900 bg-blue-900 text-white p-4 shadow-md flex justify-between items-center">
+        <h1 class="text-xl font-bold">F&B Banquet Dashboard</h1>
+        <div class="space-x-4">
+            <button class="bg-white text-blue-900 px-4 py-2 rounded font-semibold hover:bg-blue-100" onclick="alert('Export to PDF not yet fully implemented in Vanilla JS. Use Ctrl+P for now.')">Export PDF</button>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container mx-auto mt-8 p-4">
+        <!-- Controls -->
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex space-x-2">
+                <button class="px-4 py-2 bg-blue-800 text-white rounded shadow" onclick="renderEvents()">Refresh Data</button>
+            </div>
+            <div class="flex space-x-4">
+                <select id="venueFilter" class="border p-2 rounded" onchange="renderEvents()">
+                    <option value="all">All Venues</option>
+                    <option value="Coral">Coral Restaurant</option>
+                    <option value="Sunset">Sunset Terrace</option>
+                    <option value="Pool">Pool Area</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Event List View (Simplified Calendar Alternative) -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-2xl font-bold mb-4 text-blue-900">Upcoming Events</h2>
+            <div id="eventContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <p>Loading events from Google Sheets...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Event Details -->
+    <div id="eventModal" class="modal fixed inset-0 bg-black bg-opacity-50 justify-center items-center">
+        <div class="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
+            <h3 id="modalTitle" class="text-2xl font-bold text-blue-900 mb-2">Event Name</h3>
+            <p id="modalDate" class="text-gray-600 mb-4"></p>
+            <div class="space-y-2 mb-6">
+                <p><strong>Venue:</strong> <span id="modalVenue"></span></p>
+                <p><strong>Pax:</strong> <span id="modalPax"></span></p>
+                <p><strong>Sales Person:</strong> <span id="modalSales"></span></p>
+                <p><strong>Status:</strong> <span id="modalStatus" class="font-bold"></span></p>
+            </div>
+            <button class="bg-blue-900 text-white px-4 py-2 rounded w-full" onclick="closeModal()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // ប្តូរ URL ខាងក្រោមទៅជា URL ដែល Deploy បានពី Apps Script
+        const API_URL = 'httpsscript.google.commacrossAKfycbzZ_fNoYCwZ7r7GIUEpTusjoqVlQNMafyZ1fR1VyymEnQ6AtbyFd1IPChYfkG8iTC2AgQexec';
+        let eventsData = [];
+
+        async function fetchEvents() {
+            try {
+                const response = await fetch(API_URL);
+                eventsData = await response.json();
+                renderEvents();
+            } catch (error) {
+                document.getElementById('eventContainer').innerHTML = `<p class="text-red-500">Error loading data.</p>`;
+            }
+        }
+
+        function renderEvents() {
+            const container = document.getElementById('eventContainer');
+            const venueFilter = document.getElementById('venueFilter').value.toLowerCase();
+            container.innerHTML = '';
+
+            const filteredEvents = eventsData.filter(ev => {
+                if (venueFilter === 'all') return true;
+                return ev.location.toLowerCase().includes(venueFilter);
+            });
+
+            filteredEvents.forEach((ev, index) => {
+                const isConfirmed = ev.status.includes('confirm');
+                const bgColor = isConfirmed ? 'bg-green-100 border-green-500' : 'bg-orange-100 border-orange-500';
+                const textColor = isConfirmed ? 'text-green-800' : 'text-orange-800';
+
+                const card = document.createElement('div');
+                card.className = `border-l-4 p-4 rounded shadow cursor-pointer hover:shadow-md transition ${bgColor}`;
+                card.onclick = () => openModal(index, filteredEvents);
+                
+                card.innerHTML = `
+                    <h4 class="font-bold text-lg text-blue-900">${ev.groupName || 'No Name'}</h4>
+                    <p class="text-sm text-gray-700">${new Date(ev.date).toLocaleDateString()} | ${ev.time}</p>
+                    <p class="text-sm font-semibold mt-2 ${textColor}">${ev.status.toUpperCase()}</p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function openModal(index, dataArray) {
+            const ev = dataArray[index];
+            document.getElementById('modalTitle').innerText = ev.groupName || 'No Name';
+            document.getElementById('modalDate').innerText = `${new Date(ev.date).toLocaleDateString()} | ${ev.time}`;
+            document.getElementById('modalVenue').innerText = ev.location;
+            document.getElementById('modalPax').innerText = ev.pax;
+            document.getElementById('modalSales').innerText = ev.salesPerson;
+            document.getElementById('modalStatus').innerText = ev.status.toUpperCase();
+            
+            const isConfirmed = ev.status.includes('confirm');
+            document.getElementById('modalStatus').className = isConfirmed ? 'text-green-600 font-bold' : 'text-orange-600 font-bold';
+
+            document.getElementById('eventModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('eventModal').classList.remove('active');
+        }
+
+        // Fetch data on load
+        fetchEvents();
+    </script>
+</body>
+</html>
