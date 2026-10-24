@@ -1,408 +1,709 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Banquet Event Calendar Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .modal { display: none; opacity: 0; transition: opacity 0.3s ease; }
-        .modal.active { display: flex; opacity: 1; }
-        
-        /* Custom Animation for Cards */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-up {
-            animation: fadeInUp 0.5s ease-out forwards;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Banquet Weekly Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Kantumruy+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+@property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
 
-        /* ==========================================
-           PRINT STYLES (For A4 Landscape PDF Export)
-           ========================================== */
-        @media print {
-            @page {
-                size: A4 landscape;
-                margin: 8mm; /* Margin ល្មមសម្រាប់ A4 ផ្តេក */
-            }
-            
-            body {
-                background-color: white !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-                font-size: 12px !important;
-            }
+:root {
+  --navy:#0b1f4d; --blue:#2563eb; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
+  --green:#16a34a; --green-bg:#ecfdf5;
+  --amber:#d97706; --amber-bg:#fffbeb;
+  --red:#dc2626;   --red-bg:#fef2f2;
+  --slate:#475569; --slate-bg:#f1f5f9;
+  --sky:#2563eb;   --sky-bg:#eff6ff;
+  --gold:#fbbf24;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: 'Inter','Kantumruy Pro','Noto Sans Khmer','Khmer OS',system-ui,sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 600px at 8% -10%, #dbeafe 0, transparent 60%),
+    radial-gradient(900px 500px at 100% 115%, #fef3c7 0, transparent 55%),
+    #f1f5f9;
+  -webkit-font-smoothing: antialiased;
+}
+.app { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
 
-            /* លាក់ Navbar និង Filter ពេល Print */
-            nav, #filterArea, button, .modal, .animate-spin {
-                display: none !important;
-            }
+/* ---------- Header ---------- */
+.top {
+  position: relative; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 10px 20px; color: #fff;
+  background: linear-gradient(110deg, #0b1f4d, #1d4ed8, #0b1f4d);
+  background-size: 200% 100%;
+  animation: hue 14s ease-in-out infinite alternate;
+  box-shadow: 0 6px 24px rgba(11,31,77,.25);
+}
+@keyframes hue { to { background-position: 100% 0; } }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.logo {
+  width: 42px; height: 42px; flex: none; border-radius: 12px; display: grid; place-items: center;
+  background: rgba(255,255,255,.14); font-size: 22px; backdrop-filter: blur(4px);
+  animation: float 4s ease-in-out infinite;
+}
+@keyframes float { 50% { transform: translateY(-3px); } }
+.title {
+  font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  font-size: clamp(14px, 1.8vw, 24px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.title small { display: block; font-size: 11px; font-weight: 600; letter-spacing: .22em; color: #bfdbfe; }
+.actions { display: flex; gap: 10px; flex: none; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.28); background: rgba(255,255,255,.12); color: #fff;
+  font: 700 13px/1 inherit; font-family: inherit; padding: 10px 14px; border-radius: 10px;
+  transition: transform .2s, background .2s, box-shadow .2s;
+}
+.btn:hover { background: rgba(255,255,255,.22); transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,.2); }
+.btn:active { transform: translateY(0) scale(.97); }
+.btn.solid { background: #fff; color: var(--navy); border-color: #fff; }
+.btn.solid:hover { background: #eff6ff; }
+.btn .ic { display: inline-block; }
+.btn.loading .ic { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-            .container {
-                margin: 0 !important;
-                padding: 0 !important;
-                max-width: 100% !important;
-            }
+/* ---------- Toolbar ---------- */
+.toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+  padding: 9px 20px; background: rgba(255,255,255,.72); backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line); position: relative; z-index: 4;
+}
+.weeknav { display: flex; align-items: center; gap: 6px; }
+.nbtn {
+  height: 36px; min-width: 36px; padding: 0 12px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--line); background: #fff; color: var(--navy); font: 800 14px inherit; font-family: inherit;
+  transition: transform .18s, box-shadow .18s, background .18s;
+}
+.nbtn:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(15,23,42,.12); background: #eff6ff; }
+.nbtn:active { transform: scale(.94); }
+.nbtn.today { background: var(--navy); color: #fff; border-color: var(--navy); font-size: 12px; letter-spacing: .06em; }
+.nbtn.today:hover { background: #12306f; }
+.weeklabel { min-width: 200px; text-align: center; font-weight: 800; font-size: 15px; color: var(--navy); }
+.weeklabel small { display: block; font-size: 10px; font-weight: 700; letter-spacing: .2em; color: var(--muted); }
+.stats { display: flex; gap: 8px; }
+.stat {
+  display: flex; align-items: baseline; gap: 6px; padding: 6px 12px; border-radius: 10px;
+  background: #fff; border: 1px solid var(--line); font-size: 11px; font-weight: 700; color: var(--muted);
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.stat b { font-size: 18px; font-weight: 900; color: var(--ink); letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.stat.g b { color: var(--green); } .stat.a b { color: var(--amber); }
+.filters { display: flex; gap: 8px; flex: 1; justify-content: flex-end; flex-wrap: wrap; align-items: center; }
+.filters input, .filters select {
+  height: 36px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: #334155;
+  padding: 0 12px; font: 600 13px inherit; font-family: inherit; outline: none; transition: box-shadow .2s, border-color .2s;
+}
+.filters input { width: 190px; }
+.filters input:focus, .filters select:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(37,99,235,.15); }
+.switch { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #475569; cursor: pointer; user-select: none; }
+.switch input { display: none; }
+.switch i { width: 38px; height: 22px; border-radius: 99px; background: #cbd5e1; position: relative; transition: background .25s; }
+.switch i::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); transition: transform .25s cubic-bezier(.3,1.6,.5,1); }
+.switch input:checked + i { background: var(--blue); }
+.switch input:checked + i::after { transform: translateX(16px); }
+.updated { font-size: 11px; font-weight: 600; color: var(--muted); }
+.err {
+  margin: 10px 20px 0; padding: 10px 14px; border-radius: 12px; background: var(--red-bg); color: #991b1b;
+  border: 1px solid #fecaca; font-size: 13px; font-weight: 600; animation: dropIn .4s ease both;
+}
+.err[hidden] { display: none; }
+@keyframes dropIn { from { opacity: 0; transform: translateY(-10px); } }
 
-            /* ចំណងជើងពេល Print លើក្រដាស */
-            .container::before {
-                content: "INDEPENDENCE HOTEL | F&B BANQUET DASHBOARD (PRINTED REPORT)";
-                display: block;
-                text-align: center;
-                font-size: 22px;
-                font-weight: bold;
-                color: #1e3a8a;
-                margin-bottom: 15px;
-                border-bottom: 2px solid #1e3a8a;
-                padding-bottom: 10px;
-                text-transform: uppercase;
-            }
+/* ---------- Grid (8 boxes) ---------- */
+main { flex: 1; min-height: 0; padding: 14px 20px 18px; }
+#grid {
+  height: 100%; display: grid; gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
 
-            /* តម្រៀបជា ៣ ជួរស្អាត សម្រាប់ A4 ផ្តេក */
-            #eventContainer {
-                display: grid !important;
-                grid-template-columns: repeat(3, 1fr) !important; 
-                gap: 12px !important;
-            }
+.day {
+  position: relative; display: flex; flex-direction: column; min-height: 0;
+  background: rgba(255,255,255,.92); border: 1px solid var(--line); border-radius: 18px;
+  box-shadow: 0 2px 6px rgba(15,23,42,.05), 0 10px 26px rgba(15,23,42,.05);
+  animation: pop .6s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i) * 60ms);
+  transition: transform .25s, box-shadow .25s;
+}
+.day:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(15,23,42,.06), 0 18px 36px rgba(15,23,42,.1); }
+@keyframes pop { from { opacity: 0; transform: translate(var(--dx, 0px), 22px) scale(.95); } }
+.day.weekend { background: linear-gradient(180deg, #fff1f2 0, rgba(255,255,255,.92) 90px); }
+.day.past .dnum { color: #94a3b8; }
+.day.past .evs { opacity: .78; }
+.day.today { border-color: var(--blue); background: linear-gradient(180deg, #dbeafe 0, rgba(255,255,255,.95) 100px); }
+.day.today::after {
+  content: ''; position: absolute; inset: -2px; border-radius: 19px; border: 2px solid var(--blue);
+  pointer-events: none; animation: glow 2.4s ease-in-out infinite;
+}
+@keyframes glow { 0% { box-shadow: 0 0 0 0 rgba(37,99,235,.45); } 70%,100% { box-shadow: 0 0 0 12px rgba(37,99,235,0); } }
 
-            /* ការពារកុំឲ្យដាច់ Card ពាក់កណ្តាលក្រដាស */
-            #eventContainer > div {
-                break-inside: avoid !important;
-                page-break-inside: avoid !important;
-                box-shadow: inset 0 0 0 1px #e2e8f0 !important;
-                border: 1px solid #cbd5e1 !important;
-                border-left-width: 5px !important;
-                animation: none !important;
-                transform: none !important;
-                opacity: 1 !important;
-            }
-        }
-    </style>
+.day-h { display: flex; align-items: center; gap: 10px; padding: 11px 14px 8px; }
+.dnum { font-size: 38px; font-weight: 900; line-height: 1; color: var(--navy); font-variant-numeric: tabular-nums; }
+.dmeta { display: flex; flex-direction: column; line-height: 1.2; }
+.dow { font-size: 13px; font-weight: 800; letter-spacing: .18em; color: var(--blue); }
+.weekend .dow { color: #e11d48; }
+.dmon { font-size: 11px; font-weight: 700; letter-spacing: .16em; color: var(--muted); }
+.cnt {
+  margin-left: auto; min-width: 26px; height: 26px; padding: 0 8px; display: grid; place-items: center;
+  border-radius: 99px; font-size: 12px; font-weight: 800; color: #fff; background: var(--navy);
+}
+.cnt.gold { background: var(--gold); color: #422006; }
+.badge-today {
+  margin-left: auto; font-size: 10px; font-weight: 800; letter-spacing: .14em; padding: 4px 9px;
+  border-radius: 99px; background: var(--blue); color: #fff; animation: bounce 1.8s ease-in-out infinite;
+}
+.badge-today + .cnt { margin-left: 6px; }
+@keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+.evs {
+  flex: 1; min-height: 0; overflow-y: auto; padding: 2px 10px 10px; display: flex; flex-direction: column; gap: 8px;
+  scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;
+}
+.evs::-webkit-scrollbar { width: 6px; } .evs::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9px; }
+.hidden-note { margin-top: auto; text-align: center; font-size: 10px; font-weight: 700; letter-spacing: .06em; color: #94a3b8; padding-top: 2px; }
+
+/* Event card */
+.ev {
+  position: relative; flex: none; padding: 8px 10px 8px 12px; border-radius: 12px; cursor: pointer; outline: none;
+  background: var(--bg); border: 1px solid rgba(15,23,42,.06); border-left: 4px solid var(--c);
+  animation: evIn .5s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 60ms + var(--j) * 70ms + 160ms);
+  transition: transform .2s, box-shadow .2s;
+}
+.ev:hover, .ev:focus-visible { transform: translateX(4px) scale(1.015); box-shadow: 0 8px 20px rgba(15,23,42,.14); }
+.ev:focus-visible { box-shadow: 0 0 0 3px rgba(37,99,235,.4); }
+@keyframes evIn { from { opacity: 0; transform: translateX(-14px); } }
+.st-confirmed { --c: var(--green); --bg: var(--green-bg); }
+.st-prospect  { --c: var(--amber); --bg: var(--amber-bg); }
+.st-cancelled { --c: var(--red);   --bg: var(--red-bg); }
+.st-block     { --c: var(--slate); --bg: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 6px, #e7ecf3 6px, #e7ecf3 12px); }
+.st-none      { --c: var(--sky);   --bg: var(--sky-bg); }
+.st-other     { --c: #7c3aed;      --bg: #f5f3ff; }
+.st-cancelled .ev-name { text-decoration: line-through; color: #7f1d1d; }
+.st-cancelled, .st-block { opacity: .85; }
+.ev-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ev-time { font-size: 12px; font-weight: 800; color: var(--c); font-variant-numeric: tabular-nums; }
+.pill {
+  display: inline-flex; align-items: center; font-size: 9px; font-weight: 800; letter-spacing: .09em;
+  padding: 2px 8px; border-radius: 99px; color: var(--c); background: #fff; border: 1px solid var(--c); white-space: nowrap;
+}
+.st-confirmed .pill::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--c); margin-right: 5px; animation: ping 1.8s infinite;
+}
+@keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(22,163,74,.6); } 80%,100% { box-shadow: 0 0 0 6px rgba(22,163,74,0); } }
+.ev-name {
+  margin: 3px 0 2px; font-size: 13px; font-weight: 800; line-height: 1.25; color: var(--navy); text-transform: uppercase;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ev-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; font-weight: 600; color: #475569; }
+.ev-where { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.ev-pax { flex: none; font-weight: 800; color: #1e293b; }
+
+/* ---------- Highlight box (upcoming week, confirmed) ---------- */
+.hl {
+  position: relative; display: flex; flex-direction: column; min-height: 0; overflow: hidden; color: #fff; border-radius: 18px;
+  background: linear-gradient(160deg, #0b1f4d 0%, #1e3a8a 58%, #312e81 100%);
+  box-shadow: 0 14px 36px rgba(30,58,138,.38);
+  animation: pop .6s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i) * 60ms);
+}
+.hl::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 2.5px; pointer-events: none; z-index: 2;
+  background: conic-gradient(from var(--angle), #fbbf24, #3b82f6, #22c55e, #f472b6, #fbbf24);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); mask-composite: exclude;
+  animation: rot 6s linear infinite;
+}
+@keyframes rot { to { --angle: 360deg; } }
+.hl::after {
+  content: ''; position: absolute; top: 0; left: -60%; width: 38%; height: 100%; pointer-events: none; z-index: 1;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.16), transparent); transform: skewX(-20deg);
+  animation: shine 5.5s ease-in-out infinite;
+}
+@keyframes shine { 0%,55% { left: -60%; } 100% { left: 135%; } }
+.hl-h { position: relative; z-index: 3; display: flex; align-items: center; gap: 10px; padding: 13px 14px 8px; }
+.hl-star { font-size: 26px; animation: twinkle 2.4s ease-in-out infinite; }
+@keyframes twinkle { 0%,100% { transform: scale(1) rotate(0); } 50% { transform: scale(1.18) rotate(14deg); } }
+.hl-t { font-size: 14px; font-weight: 900; letter-spacing: .16em; color: var(--gold); }
+.hl-s { font-size: 11px; font-weight: 600; color: #bfdbfe; letter-spacing: .04em; }
+.hl-list { position: relative; z-index: 3; flex: 1; min-height: 0; overflow-y: auto; padding: 2px 10px 12px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.3) transparent; }
+.grp {
+  padding: 9px 12px; border-radius: 13px; cursor: pointer; outline: none;
+  background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.18);
+  animation: evIn .5s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i) * 60ms + var(--j) * 90ms + 200ms);
+  transition: transform .2s, background .2s;
+}
+.grp:hover, .grp:focus-visible { background: rgba(255,255,255,.18); transform: translateX(4px); }
+.grp-name { font-size: 13px; font-weight: 800; text-transform: uppercase; line-height: 1.25; }
+.grp-sub { margin-top: 2px; font-size: 11px; font-weight: 600; color: #bfdbfe; }
+.grp-days { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.chip { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 8px; color: #fde68a; background: rgba(251,191,36,.16); border: 1px solid rgba(251,191,36,.45); }
+.chip b { color: #fff; margin-left: 4px; }
+.hl-empty { position: relative; z-index: 3; flex: 1; display: grid; place-content: center; text-align: center; gap: 8px; padding: 20px; color: #bfdbfe; font-weight: 600; font-size: 13px; }
+.hl-empty .sp { font-size: 34px; animation: twinkle 2.4s ease-in-out infinite; }
+
+/* ---------- Skeleton ---------- */
+.sk { border-radius: 18px; background: linear-gradient(100deg, #e2e8f0 30%, #f8fafc 50%, #e2e8f0 70%); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ---------- Modal ---------- */
+.modal-bg {
+  position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; padding: 16px;
+  background: rgba(8,15,35,.55); backdrop-filter: blur(6px);
+}
+.modal-bg.open { display: flex; animation: fade .25s ease both; }
+@keyframes fade { from { opacity: 0; } }
+.modal {
+  position: relative; width: 100%; max-width: 480px; max-height: 90vh; overflow: auto; border-radius: 22px; background: #fff;
+  box-shadow: 0 30px 80px rgba(0,0,0,.4); animation: spring .45s cubic-bezier(.2,1.2,.3,1) both;
+}
+@keyframes spring { from { opacity: 0; transform: translateY(30px) scale(.9); } }
+.m-head { padding: 22px 56px 16px 22px; color: #fff; background: linear-gradient(135deg, var(--c, #1e3a8a), #0b1f4d); }
+.m-head h3 { margin: 0 0 4px; font-size: 20px; font-weight: 800; text-transform: uppercase; line-height: 1.25; }
+.m-head p { margin: 0; font-size: 13px; font-weight: 600; opacity: .9; }
+.m-x { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer; font-size: 16px; color: #fff; background: rgba(255,255,255,.2); transition: transform .25s, background .2s; }
+.m-x:hover { background: rgba(255,255,255,.35); transform: rotate(90deg); }
+.m-body { padding: 16px 22px 22px; }
+.row { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px dashed var(--line); font-size: 14px; animation: evIn .4s ease both; animation-delay: calc(var(--k) * 45ms + 120ms); }
+.row:last-of-type { border-bottom: 0; }
+.row > span:first-child { font-weight: 700; color: var(--muted); flex: none; }
+.row > span:last-child { font-weight: 700; text-align: right; color: var(--ink); white-space: pre-line; }
+.m-body a { color: var(--blue); word-break: break-all; }
+.m-close { margin-top: 14px; width: 100%; padding: 13px; border: 0; border-radius: 12px; cursor: pointer; background: var(--navy); color: #fff; font: 800 14px inherit; font-family: inherit; transition: transform .2s, background .2s; }
+.m-close:hover { background: #12306f; transform: translateY(-2px); }
+.g-row { padding: 10px 12px; margin-bottom: 8px; border-radius: 12px; background: var(--slate-bg); border-left: 4px solid var(--green); font-size: 13px; animation: evIn .4s ease both; animation-delay: calc(var(--k) * 45ms + 120ms); }
+.g-row b { display: block; color: var(--navy); font-size: 13px; }
+.print-title { display: none; }
+
+/* ---------- Responsive ---------- */
+@media (max-height: 820px) {
+  .dnum { font-size: 30px; } .day-h { padding: 8px 12px 6px; } .top { padding: 7px 18px; } .logo { width: 36px; height: 36px; }
+  .toolbar { padding: 6px 18px; } main { padding: 10px 18px 12px; } #grid { gap: 10px; }
+}
+@media (max-width: 1180px) {
+  .app { height: auto; min-height: 100vh; }
+  #grid { height: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: minmax(230px, auto); }
+  .evs, .hl-list { overflow: visible; }
+  .filters { justify-content: flex-start; }
+}
+@media (max-width: 640px) {
+  #grid { grid-template-columns: 1fr; } .title small { display: none; } .weeklabel { min-width: 0; flex: 1; }
+  .filters input { width: 100%; } .btn span.t { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+#grid.noanim .day, #grid.noanim .ev, #grid.noanim .grp, #grid.noanim .hl { animation: none; }
+
+/* ---------- Print: A4 landscape ---------- */
+@media print {
+  @page { size: A4 landscape; margin: 8mm; }
+  html, body { height: auto; background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .top, .toolbar, .modal-bg, .err { display: none !important; }
+  .app { height: auto; }
+  .print-title { display: block; text-align: center; font-size: 17px; font-weight: 800; color: #1e3a8a; text-transform: uppercase; letter-spacing: .06em; padding: 0 0 6px; margin-bottom: 8px; border-bottom: 2px solid #1e3a8a; }
+  .print-title small { display: block; font-size: 11px; color: #475569; letter-spacing: .12em; }
+  main { padding: 0; }
+  #grid { height: auto; grid-template-columns: repeat(4, 1fr); grid-template-rows: auto auto; gap: 6px; }
+  .day, .hl { break-inside: avoid; box-shadow: none !important; border: 1px solid #cbd5e1; animation: none !important; transform: none !important; opacity: 1 !important; }
+  .day::after, .hl::before, .hl::after { display: none !important; }
+  .evs, .hl-list { overflow: visible; }
+  .ev, .grp { animation: none !important; opacity: 1 !important; transform: none !important; box-shadow: none !important; }
+  .dnum { font-size: 26px; } .ev-name { font-size: 10px; } .ev-meta, .ev-time { font-size: 9px; } .pill { font-size: 7px; }
+}
+</style>
 </head>
-<body class="bg-gray-50 text-slate-800 font-sans">
-    
-    <!-- Navbar / Header -->
-    <nav class="bg-blue-900 text-white p-4 shadow-md relative flex justify-between items-center h-24 overflow-hidden">
-        <h1 class="absolute w-full left-0 text-center font-bold tracking-wider uppercase" style="font-size: 35px; pointer-events: none;">
-            INDEPENDENCE HOTEL | F&B BANQUET DASHBOARD
-        </h1>
-        <div class="ml-auto z-10 flex space-x-4">
-            <button class="px-4 py-2 bg-blue-700 text-white rounded font-semibold shadow hover:bg-blue-600 transition duration-300 flex items-center" onclick="fetchEvents()">🔄 Refresh Data</button>
-            <button class="bg-white text-blue-900 px-4 py-2 rounded font-semibold shadow hover:bg-blue-100 transition duration-300 flex items-center" onclick="window.print()">🖨️ Export PDF</button>
-        </div>
-    </nav>
-
-    <!-- Main Container -->
-    <div class="container mx-auto mt-6 p-4">
-        
-        <!-- Filter Controls Area -->
-        <div id="filterArea" class="bg-white p-4 rounded-lg shadow-sm border mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                
-                <input type="text" id="searchFilter" placeholder="🔍 Search Group Name..." class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition lg:col-span-1" onkeyup="renderEvents()">
-
-                <!-- DATE FILTER (Default = This Week) -->
-                <select id="dateFilter" class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition lg:col-span-1" onchange="toggleDateRange(); renderEvents();">
-                    <option value="all">📅 All Dates</option>
-                    <option value="this_week" selected>📅 This Week (Next 7 Days)</option>
-                    <option value="this_month">📅 This Month</option>
-                    <option value="custom">📅 Custom Date Range</option>
-                </select>
-
-                <div id="customDateWrap" class="hidden flex space-x-2 lg:col-span-2">
-                    <input type="date" id="startDate" class="border p-2 rounded text-gray-700 w-full" onchange="renderEvents()">
-                    <span class="self-center text-gray-500 font-medium">to</span>
-                    <input type="date" id="endDate" class="border p-2 rounded text-gray-700 w-full" onchange="renderEvents()">
-                </div>
-
-                <select id="statusFilter" class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition lg:col-span-1" onchange="renderEvents()">
-                    <option value="all">✅ All Events</option>
-                    <option value="confirmed">🟢 Confirmed Group Only</option>
-                    <option value="unconfirmed">🟠 All Unconfirmed Status</option>
-                </select>
-
-                <select id="venueFilter" class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition lg:col-span-1" onchange="renderEvents()">
-                    <option value="all">📍 All Venues</option>
-                    <option value="hibiscus">Hibiscus Room</option>
-                    <option value="camellia">Camellia Room</option>
-                    <option value="jasmine">Jasmine Room</option>
-                    <option value="champa">Champa Room</option>
-                    <option value="sky pool">Sky Pool & Poolside</option>
-                    <option value="sunset">Sunset Restaurant</option>
-                    <option value="coral">Coral Restaurant</option>
-                    <option value="history">History Bar</option>
-                    <option value="beach">Beach</option>
-                </select>
-                
-            </div>
-        </div>
-
-        <!-- Event List View -->
-        <div class="bg-white shadow rounded-lg p-6 min-h-[400px]" style="box-shadow: none; border: none; padding: 0;">
-            <div id="eventContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                <!-- Loader Placeholder -->
-                <div class="col-span-full text-center py-12">
-                    <div class="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-blue-600 rounded-full" role="status"></div>
-                    <p class="mt-2 text-gray-500 font-medium">Loading events from Google Sheets...</p>
-                </div>
-            </div>
-        </div>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">🏨</div>
+      <div class="title">Independence Hotel | F&amp;B Banquet Dashboard<small>WEEKLY OVERVIEW</small></div>
     </div>
-
-    <!-- Modal for Event Details -->
-    <div id="eventModal" class="modal fixed inset-0 bg-black bg-opacity-60 justify-center items-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full m-4 transform scale-100 transition-transform duration-300 relative">
-            <button class="absolute top-4 right-4 text-gray-400 hover:text-red-500 font-bold text-xl" onclick="closeModal()">✕</button>
-            <h3 id="modalTitle" class="text-2xl font-bold text-blue-900 mb-2 border-b pb-2">Event Name</h3>
-            <p id="modalDate" class="text-gray-600 mb-4 font-semibold mt-2"></p>
-            <div class="space-y-3 mb-6 bg-gray-50 p-4 rounded-lg border">
-                <p class="flex justify-between border-b pb-1"><strong>Res. Code:</strong> <span id="modalCode" class="text-gray-700"></span></p>
-                <p class="flex justify-between border-b pb-1"><strong>Venue & Type:</strong> <span id="modalVenue" class="text-gray-700 text-right font-medium"></span></p>
-                <p class="flex justify-between border-b pb-1"><strong>Pax:</strong> <span id="modalPax" class="text-gray-700 font-bold bg-white px-2 border rounded"></span></p>
-                <p class="flex justify-between"><strong>Status:</strong> <span id="modalStatus" class="font-bold uppercase tracking-wider"></span></p>
-            </div>
-            <button class="bg-blue-900 hover:bg-blue-800 text-white px-4 py-3 rounded-lg w-full font-bold transition-colors shadow-md" onclick="closeModal()">Close Details</button>
-        </div>
+    <div class="actions">
+      <button class="btn" id="btnRefresh" title="Refresh data"><span class="ic">🔄</span><span class="t">Refresh</span></button>
+      <button class="btn solid" id="btnPrint" title="Print / Save as PDF"><span class="ic">🖨️</span><span class="t">Export PDF</span></button>
     </div>
+  </header>
 
-    <script>
-        // System Error Catcher - Auto reports any JS bug to screen
-        window.onerror = function(message, source, lineno) {
-            const container = document.getElementById('eventContainer');
-            if (container) {
-                container.innerHTML = `
-                <div class="col-span-full bg-red-100 text-red-800 p-6 rounded-lg text-left border border-red-300">
-                    <h3 class="font-bold text-lg mb-2">❌ JavaScript Error Detected:</h3>
-                    <p><strong>Message:</strong> ${message}</p>
-                    <p><strong>Line:</strong> ${lineno}</p>
-                </div>`;
-            }
-        };
+  <div class="toolbar">
+    <div class="weeknav">
+      <button class="nbtn" id="btnPrev" aria-label="Previous week">◀</button>
+      <div class="weeklabel"><small id="weekNo">WEEK</small><span id="weekRange">—</span></div>
+      <button class="nbtn" id="btnNext" aria-label="Next week">▶</button>
+      <button class="nbtn today" id="btnToday">THIS WEEK</button>
+    </div>
+    <div class="stats">
+      <div class="stat">Events <b id="stAll" data-v="0">0</b></div>
+      <div class="stat g">Confirmed <b id="stConf" data-v="0">0</b></div>
+      <div class="stat a">Prospect <b id="stPros" data-v="0">0</b></div>
+    </div>
+    <div class="filters">
+      <input id="q" type="search" placeholder="🔍 Search group…" autocomplete="off">
+      <select id="venue">
+        <option value="all">📍 All Venues</option>
+        <option value="hibiscus">Hibiscus Room</option>
+        <option value="camellia">Camelia Room</option>
+        <option value="jasmine">Jasmine Room</option>
+        <option value="champa">Champa Room</option>
+        <option value="skypool">Sky Pool &amp; Poolside</option>
+        <option value="sunset">Sunset Restaurant</option>
+        <option value="coral">Coral Restaurant</option>
+        <option value="history">History Bar</option>
+        <option value="beach">Beach</option>
+        <option value="other">Other</option>
+      </select>
+      <select id="status">
+        <option value="all">✅ All Status</option>
+        <option value="confirmed">🟢 Confirmed</option>
+        <option value="prospect">🟠 Prospect</option>
+        <option value="cancelled">🔴 Cancelled</option>
+        <option value="block">⚪ Blocked</option>
+      </select>
+      <label class="switch"><input type="checkbox" id="showAll"><i></i>Show cancelled / blocked</label>
+      <span class="updated" id="updated"></span>
+    </div>
+  </div>
 
-        const API_URL = 'https://script.google.com/macros/s/AKfycbw1F7SsSLEazvkYlZ0RZZ3D7Xzu8heAJh8xYBEQx5bB6WSkejYVY6jDJJrmqy9DdZVN4g/exec';
-        let eventsData = [];
+  <div class="err" id="err" hidden></div>
 
-        async function fetchEvents() {
-            const container = document.getElementById('eventContainer');
-            container.innerHTML = `
-                <div class="col-span-full text-center py-12">
-                    <div class="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-blue-600 rounded-full"></div>
-                    <p class="mt-3 text-gray-500 font-medium">Refreshing data from Server...</p>
-                </div>`;
+  <main>
+    <div class="print-title" id="printTitle"></div>
+    <div id="grid"></div>
+  </main>
+</div>
 
-            try {
-                const response = await fetch(API_URL, { redirect: 'follow' });
-                if (!response.ok) throw new Error('Network response failed: ' + response.status);
-                
-                eventsData = await response.json();
-                
-                if(Array.isArray(eventsData)) {
-                    eventsData.sort((a, b) => new Date(a.date) - new Date(b.date));
-                }
-                
-                renderEvents();
-                
-            } catch (error) {
-                container.innerHTML = `
-                <div class="col-span-full bg-red-50 p-6 rounded-lg text-red-600 text-center border border-red-200 shadow-sm">
-                    <h3 class="font-bold text-lg mb-1">❌ Connection Error</h3>
-                    <p class="text-sm mt-2 font-medium">${error.message}</p>
-                    <p class="text-sm mt-1">សូមប្រាកដថា Google Script Web App ត្រូវបានសិទ្ធិជា 'Anyone' និង URL ត្រឹមត្រូវ។</p>
-                </div>`;
-            }
-        }
+<div class="modal-bg" id="modalBg" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" id="modal"></div>
+</div>
 
-        function toggleDateRange() {
-            const dateFilter = document.getElementById('dateFilter').value;
-            const customWrap = document.getElementById('customDateWrap');
-            if(dateFilter === 'custom') {
-                customWrap.classList.remove('hidden');
-                customWrap.classList.add('lg:col-span-2'); 
-            } else {
-                customWrap.classList.add('hidden');
-                customWrap.classList.remove('lg:col-span-2');
-            }
-        }
+<script>
+(function () {
+  'use strict';
 
-        function renderEvents() {
-            const container = document.getElementById('eventContainer');
-            
-            const searchFilter = (document.getElementById('searchFilter').value || '').toLowerCase();
-            const venueFilter = (document.getElementById('venueFilter').value || '').toLowerCase();
-            const statusFilter = document.getElementById('statusFilter').value;
-            const dateFilter = document.getElementById('dateFilter').value;
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            
-            container.innerHTML = '';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzZ_fNoYCwZ7r7GIUEpTusjoqVlQNMafyZ1fR1VyymEnQ6AtbyFd1IPChYfkG8iTC2AgQ/exec';
+  const TZ = 'Asia/Phnom_Penh';
+  const CACHE_KEY = 'banquetDash.v2';
+  const DOW = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const DOWFULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MON = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const MONFULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const MIDX = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
 
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const next7Days = new Date(today);
-            next7Days.setDate(today.getDate() + 7);
+  /* ================= Pure helpers (also used by tests) ================= */
+  const pad = n => String(n).padStart(2, '0');
+  const str = v => (v == null ? '' : String(v).trim());
+  const oneLine = s => str(s).replace(/\s+/g, ' ');
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 
-            // Timezone safe parsing for custom dates
-            const filterStart = startDate ? new Date(startDate + "T00:00:00") : null;
-            const filterEnd = endDate ? new Date(endDate + "T23:59:59") : null;
+  // Calendar key (YYYY-MM-DD) in the hotel's time zone — immune to viewer time-zone shifts.
+  const pnhKey = d => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year:'numeric', month:'2-digit', day:'2-digit' }).format(d);
+  const parts = key => { const [y, m, d] = key.split('-').map(Number); return { y, m, d }; };
+  const keyAdd = (key, n) => { const p = parts(key); return new Date(Date.UTC(p.y, p.m - 1, p.d + n)).toISOString().slice(0, 10); };
+  const keyDow = key => { const p = parts(key); return new Date(Date.UTC(p.y, p.m - 1, p.d)).getUTCDay(); };
+  const mondayOf = key => keyAdd(key, -((keyDow(key) + 6) % 7));
+  function isoWeek(key) {
+    const p = parts(key), dt = new Date(Date.UTC(p.y, p.m - 1, p.d));
+    dt.setUTCDate(dt.getUTCDate() + 3 - ((dt.getUTCDay() + 6) % 7));
+    const w1 = new Date(Date.UTC(dt.getUTCFullYear(), 0, 4));
+    return 1 + Math.round(((dt - w1) / 864e5 - 3 + ((w1.getUTCDay() + 6) % 7)) / 7);
+  }
 
-            const filteredEvents = (eventsData || []).filter(ev => {
-                const evGroup = (ev.groupName || '').toString().toLowerCase();
-                const evLoc = (ev.location || '').toString().toLowerCase();
-                const evStatus = (ev.status || '').toString().toLowerCase();
+  function toKey(v) {
+    if (v == null || v === '') return null;
+    const s = String(v).trim();
+    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) return s;
+    m = s.match(/^(\d{1,2})[-\/\s]([A-Za-z]{3,9})[-\/\s,]*(\d{4})$/);            // 24-Oct-2026
+    if (m && MIDX[m[2].slice(0, 3).toLowerCase()] != null) return `${m[3]}-${pad(MIDX[m[2].slice(0, 3).toLowerCase()] + 1)}-${pad(+m[1])}`;
+    const d = new Date(s);                                                          // ISO date-time etc.
+    if (!isNaN(d) && d.getUTCFullYear() > 2000 && d.getUTCFullYear() < 2100) return pnhKey(d);
+    return null;
+  }
 
-                if (searchFilter && !evGroup.includes(searchFilter)) return false;
-                if (venueFilter !== 'all' && !evLoc.includes(venueFilter)) return false;
-                
-                const isConfirmed = evStatus.includes('confirm');
-                if (statusFilter === 'confirmed' && !isConfirmed) return false;
-                if (statusFilter === 'unconfirmed' && isConfirmed) return false;
+  function statusKey(s) {
+    s = str(s).toLowerCase();
+    if (!s) return 'none';
+    if (s.startsWith('confirm') || s === 'definite') return 'confirmed';   // never matches "unconfirmed"
+    if (s.includes('cancel')) return 'cancelled';
+    if (s.includes('block')) return 'block';
+    if (s.includes('prospect') || s.includes('tentative')) return 'prospect';
+    return 'other';
+  }
+  const STATUS_LABEL = { confirmed:'CONFIRMED', prospect:'PROSPECT', cancelled:'CANCELLED', block:'BLOCKED', none:'NO STATUS' };
+  const statusLabel = (sk, raw) => STATUS_LABEL[sk] || str(raw).toUpperCase();
 
-                if(!ev.date) return false;
-                const evDate = new Date(ev.date);
-                evDate.setHours(0,0,0,0);
+  function venueKey(loc) {
+    const l = str(loc).toLowerCase();
+    if (l.includes('hibiscus')) return 'hibiscus';
+    if (l.includes('camel')) return 'camellia';          // sheet spells it "Camelia"
+    if (l.includes('jasmine')) return 'jasmine';
+    if (l.includes('champa')) return 'champa';
+    if (l.includes('sky') || l.includes('pool')) return 'skypool';
+    if (l.includes('sunset')) return 'sunset';
+    if (l.includes('coral')) return 'coral';
+    if (l.includes('history')) return 'history';
+    if (l.includes('beach')) return 'beach';
+    return 'other';
+  }
+  const venueShort = loc => oneLine(loc).replace(/\s*(restaurant|room)\s*$/i, '').toUpperCase();
+  const startMin = t => { const m = str(t).match(/(\d{1,2}):(\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : 9999; };
+  const sumNums = s => (str(s).match(/\d+/g) || []).reduce((a, b) => a + (+b), 0);
+  const fmtTime = e => (str(e.time) ? str(e.time).replace(/\s*[-–]\s*/g, '–') : (statusKey(e.status) === 'block' ? 'ALL DAY' : 'TBA'));
+  const byTime = (a, b) => startMin(a.time) - startMin(b.time) || a.group.localeCompare(b.group);
 
-                if (dateFilter === 'this_week' && (evDate < today || evDate > next7Days)) return false;
-                if (dateFilter === 'this_month' && (evDate.getMonth() !== today.getMonth() || evDate.getFullYear() !== today.getFullYear())) return false;
-                if (dateFilter === 'custom') {
-                    if (filterStart && evDate < filterStart) return false;
-                    if (filterEnd && evDate > filterEnd) return false;
-                }
+  const dayLabel = key => `${DOW[keyDow(key)]} ${parts(key).d}`;
+  const longDate = key => { const p = parts(key); return `${DOWFULL[keyDow(key)]}, ${p.d} ${MONFULL[p.m - 1]} ${p.y}`; };
+  function rangeLabel(a, b) {
+    const pa = parts(a), pb = parts(b);
+    if (pa.y === pb.y && pa.m === pb.m) return `${pa.d} – ${pb.d} ${MON[pb.m - 1]} ${pb.y}`;
+    if (pa.y === pb.y) return `${pa.d} ${MON[pa.m - 1]} – ${pb.d} ${MON[pb.m - 1]} ${pb.y}`;
+    return `${pa.d} ${MON[pa.m - 1]} ${pa.y} – ${pb.d} ${MON[pb.m - 1]} ${pb.y}`;
+  }
 
-                return true;
-            });
+  function normalize(raw) {
+    const list = (Array.isArray(raw) ? raw : []).map(r => ({
+      group: str(r.groupName != null ? r.groupName : r.group),
+      dateKey: toKey(r.date),
+      time: str(r.time),
+      loc: str(r.location),
+      type: str(r.type),
+      pax: str(r.pax),
+      status: str(r.status),
+      code: str(r.code != null ? r.code : (r.resCode != null ? r.resCode : (r.reservationCode != null ? r.reservationCode : r.reservation))),
+      remark: str(r.remark != null ? r.remark : r.remarks)
+    })).filter(e => e.dateKey && e.group);          // drops empty date-only placeholder rows
+    list.forEach((e, i) => { e.id = i; });
+    return list;
+  }
 
-            if (filteredEvents.length === 0) {
-                container.innerHTML = `
-                <div class="col-span-full flex flex-col items-center justify-center py-16 text-gray-400">
-                    <svg class="w-16 h-16 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <p class="text-xl font-medium text-gray-500">No events match your criteria</p>
-                </div>`;
-                return;
-            }
+  function passes(e, f, ignoreStatus) {
+    if (f.q && !(e.group + ' ' + e.type + ' ' + e.code).toLowerCase().includes(f.q)) return false;
+    if (f.venue !== 'all' && venueKey(e.loc) !== f.venue) return false;
+    if (!ignoreStatus) {
+      const sk = statusKey(e.status);
+      if (f.status !== 'all' && sk !== f.status) return false;
+      if (f.status === 'all' && !f.showAll && (sk === 'cancelled' || sk === 'block')) return false;
+    }
+    return true;
+  }
 
-            filteredEvents.forEach((ev, index) => {
-                const evStatus = (ev.status || '').toString().toLowerCase();
-                const isConfirmed = evStatus.includes('confirm');
-                
-                // Color Logic
-                const bgColor = isConfirmed ? 'bg-green-50 border-green-500' : 'bg-orange-50 border-orange-400';
-                const badgeColor = isConfirmed ? 'bg-green-100 text-green-800 border-green-300' : 'bg-orange-100 text-orange-800 border-orange-300';
-                const dateTextColor = isConfirmed ? 'text-green-700' : 'text-blue-700';
+  /* ---------- HTML builders ---------- */
+  function evCard(e, j) {
+    const sk = statusKey(e.status);
+    const meta = [venueShort(e.loc), oneLine(e.type).toUpperCase()].filter(Boolean).map(esc).join(' · ') || 'TBA';
+    const pax = e.pax ? `<span class="ev-pax">👥 ${esc(oneLine(e.pax))}</span>` : '';
+    return `<article class="ev st-${sk}" style="--j:${j}" data-ev="${e.id}" tabindex="0" role="button" aria-label="${esc(e.group)}">
+      <div class="ev-top"><span class="ev-time">${esc(fmtTime(e))}</span><span class="pill">${esc(statusLabel(sk, e.status))}</span></div>
+      <div class="ev-name">${esc(e.group)}</div>
+      <div class="ev-meta"><span class="ev-where">📍 ${meta}</span>${pax}</div>
+    </article>`;
+  }
 
-                let fullDateStr = "TBA";
-                let bigDay = "--";
-                let bigMonth = "";
-                let shortDayName = "---";
+  function buildDay(key, i, events, today, f) {
+    const p = parts(key), dow = keyDow(key);
+    const all = events.filter(e => e.dateKey === key).sort(byTime);
+    const shown = all.filter(e => passes(e, f));
+    const hidden = (f.status === 'all' && !f.showAll)
+      ? all.filter(e => passes(e, f, true) && ['cancelled', 'block'].includes(statusKey(e.status))).length : 0;
+    const cls = ['day', key === today ? 'today' : '', key < today ? 'past' : '', (dow === 0 || dow === 6) ? 'weekend' : ''].join(' ').replace(/\s+/g, ' ').trim();
+    const badge = key === today ? '<span class="badge-today">TODAY</span>' : '';
+    const cnt = shown.length ? `<span class="cnt">${shown.length}</span>` : '';
+    return `<section class="${cls}" style="--i:${i}" data-day="${key}">
+      <div class="day-h">
+        <div class="dnum">${p.d}</div>
+        <div class="dmeta"><span class="dow">${DOW[dow]}</span><span class="dmon">${MON[p.m - 1]}</span></div>
+        ${badge}${cnt}
+      </div>
+      <div class="evs">${shown.map((e, j) => evCard(e, j)).join('')}${hidden ? `<div class="hidden-note">+${hidden} cancelled / blocked hidden</div>` : ''}</div>
+    </section>`;
+  }
 
-                if(ev.date) {
-                    const d = new Date(ev.date);
-                    if(!isNaN(d)) {
-                        fullDateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                        bigDay = d.getDate();
-                        bigMonth = d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase();
-                        shortDayName = d.toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase();
-                    }
-                }
+  function buildHighlight(events, nextStart, f, reg) {
+    const nextEnd = keyAdd(nextStart, 6);
+    const list = events.filter(e => e.dateKey >= nextStart && e.dateKey <= nextEnd && statusKey(e.status) === 'confirmed' && passes(e, f, true)).sort((a, b) => a.dateKey.localeCompare(b.dateKey) || byTime(a, b));
+    const groups = new Map();
+    list.forEach(e => { const k = e.group.toLowerCase(); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(e); });
+    const arr = [...groups.entries()].sort((a, b) => a[1][0].dateKey.localeCompare(b[1][0].dateKey));
+    const cards = arr.map(([k, evs], j) => {
+      reg.groups[k] = evs;
+      const days = new Map(); evs.forEach(e => days.set(e.dateKey, (days.get(e.dateKey) || 0) + 1));
+      const chips = [...days.entries()].map(([d, n]) => `<span class="chip">${dayLabel(d)}${n > 1 ? `<b>×${n}</b>` : ''}</span>`).join('');
+      const venues = [...new Set(evs.map(e => venueShort(e.loc)).filter(Boolean))].join(' · ');
+      const paxMax = Math.max(0, ...evs.map(e => sumNums(e.pax)));
+      return `<div class="grp" style="--j:${j}" data-grp="${esc(k)}" tabindex="0" role="button">
+        <div class="grp-name">${esc(evs[0].group)}</div>
+        <div class="grp-sub">${paxMax ? `👥 ${paxMax} pax · ` : ''}${evs.length} event${evs.length > 1 ? 's' : ''}${venues ? ' · 📍 ' + esc(venues) : ''}</div>
+        <div class="grp-days">${chips}</div>
+      </div>`;
+    }).join('');
+    const body = cards ? `<div class="hl-list">${cards}</div>`
+      : `<div class="hl-empty"><div class="sp">✨</div>No confirmed groups<br>for the upcoming week yet</div>`;
+    return `<section class="hl" style="--i:7" data-hl="1">
+      <div class="hl-h"><div class="hl-star">⭐</div>
+        <div><div class="hl-t">UPCOMING WEEK</div><div class="hl-s">Confirmed groups · ${rangeLabel(nextStart, nextEnd)}</div></div>
+        <span class="cnt gold">${arr.length}</span></div>
+      ${body}
+    </section>`;
+  }
 
-                // Combine Outlet and Event Type Safely
-                let outletString = (ev.location || 'TBA').toString().toUpperCase();
-                let evType = (ev.type || '').toString().trim().toUpperCase();
-                
-                if (evType && evType !== "-" && evType !== "N/A" && evType !== "NULL") {
-                    outletString += ` | ${evType}`;
-                }
+  function buildGrid(events, weekStart, today, f, reg) {
+    let html = '';
+    for (let i = 0; i < 7; i++) html += buildDay(keyAdd(weekStart, i), i, events, today, f);
+    html += buildHighlight(events, keyAdd(weekStart, 7), f, reg);
+    return html;
+  }
 
-                const card = document.createElement('div');
-                card.className = `relative border-l-[5px] p-5 rounded-lg shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-300 animate-fade-in-up flex flex-col ${bgColor}`;
-                card.style.opacity = '0';
-                card.style.animationDelay = `${index * 0.05}s`; 
-                card.onclick = () => openModal(index, filteredEvents);
-                
-                card.innerHTML = `
-                    <!-- Big Date & Day Name on Top Right -->
-                    <div class="absolute top-4 right-5 text-center flex flex-col items-center justify-center min-w-[55px]">
-                        <span class="text-sm font-extrabold ${dateTextColor} tracking-widest uppercase mb-1">${shortDayName}</span>
-                        <span class="text-4xl font-black text-blue-900 leading-none">${bigDay}</span>
-                        <span class="text-xs font-bold text-gray-500 tracking-widest mt-1.5">${bigMonth}</span>
-                    </div>
+  function weekStats(events, weekStart, f) {
+    const end = keyAdd(weekStart, 6);
+    const wk = events.filter(e => e.dateKey >= weekStart && e.dateKey <= end && passes(e, { q: f.q, venue: f.venue, status: 'all', showAll: false }));
+    return { all: wk.length, conf: wk.filter(e => statusKey(e.status) === 'confirmed').length, pros: wk.filter(e => statusKey(e.status) === 'prospect').length };
+  }
 
-                    <!-- Card Content -->
-                    <div class="pr-[70px] flex-grow">
-                        <p class="text-[10px] text-gray-500 font-extrabold uppercase tracking-widest mb-1">GROUP NAME:</p>
-                        <h4 class="font-bold text-lg text-blue-900 leading-tight mb-4 uppercase">${ev.groupName || 'UNNAMED EVENT'}</h4>
-                        
-                        <p class="text-sm text-gray-700 mb-2 flex items-start">
-                            <span class="font-bold text-gray-900 uppercase text-[11px] tracking-wider inline-block w-[70px] flex-shrink-0 mt-0.5">OUTLET:</span> 
-                            <span class="font-semibold text-gray-800 leading-tight">${outletString}</span>
-                        </p>
-                        
-                        <p class="text-sm text-gray-700 mb-2 flex items-center">
-                            <span class="font-bold text-gray-900 uppercase text-[11px] tracking-wider inline-block w-[70px] flex-shrink-0">DATE:</span> 
-                            <span class="font-semibold text-blue-700">${fullDateStr}</span> 
-                            <span class="mx-2 text-gray-300">|</span> 
-                            <span class="font-bold text-gray-900 uppercase text-[11px] tracking-wider mr-2">TIME:</span> 
-                            <span class="font-semibold text-gray-800">${ev.time || 'TBA'}</span>
-                        </p>
+  if (typeof window !== 'undefined') window.__dash = { toKey, mondayOf, keyAdd, isoWeek, normalize, buildGrid, statusKey, venueKey, weekStats, rangeLabel, parts };
 
-                        <p class="text-sm text-gray-700 mb-4 flex items-center">
-                            <span class="font-bold text-gray-900 uppercase text-[11px] tracking-wider inline-block w-[70px] flex-shrink-0">PAX:</span> 
-                            <span class="font-bold text-gray-800 bg-white px-2.5 py-0.5 rounded border border-gray-200 shadow-sm">${ev.pax || '?'}</span>
-                        </p>
-                    </div>
+  /* ================= App ================= */
+  function init() {
+    const $ = id => document.getElementById(id);
+    const el = { grid: $('grid'), weekNo: $('weekNo'), weekRange: $('weekRange'), q: $('q'), venue: $('venue'), status: $('status'), showAll: $('showAll'),
+      btnPrev: $('btnPrev'), btnNext: $('btnNext'), btnToday: $('btnToday'), btnRefresh: $('btnRefresh'), btnPrint: $('btnPrint'),
+      stAll: $('stAll'), stConf: $('stConf'), stPros: $('stPros'), updated: $('updated'), err: $('err'), modalBg: $('modalBg'), modal: $('modal'), printTitle: $('printTitle') };
+    const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const state = { events: [], weekStart: mondayOf(pnhKey(new Date())), follow: true, reg: { groups: {} }, updated: null };
 
-                    <!-- Bottom Status -->
-                    <div class="mt-auto border-t border-gray-200 pt-3">
-                        <span class="text-xs font-bold px-3 py-1.5 rounded border uppercase tracking-widest inline-block ${badgeColor}">
-                            ${ev.status || 'NO STATUS'}
-                        </span>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
+    const filters = () => ({ q: el.q.value.trim().toLowerCase(), venue: el.venue.value, status: el.status.value, showAll: el.showAll.checked });
+    const todayKey = () => pnhKey(new Date());
 
-        function openModal(index, dataArray) {
-            const ev = dataArray[index];
-            
-            let displayDate = "TBA";
-            if(ev.date) {
-                const d = new Date(ev.date);
-                if(!isNaN(d)) displayDate = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-            }
+    function countUp(node, to) {
+      const from = +node.dataset.v || 0; node.dataset.v = to;
+      if (from === to || reduce) { node.textContent = to; return; }
+      const t0 = performance.now(), D = 650;
+      (function step(t) {
+        const p = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - p, 3);
+        node.textContent = Math.round(from + (to - from) * e);
+        if (p < 1) requestAnimationFrame(step);
+      })(t0);
+    }
 
-            let outletString = (ev.location || 'TBA').toString().toUpperCase();
-            let evType = (ev.type || '').toString().trim().toUpperCase();
-            if (evType && evType !== "-" && evType !== "N/A" && evType !== "NULL") {
-                outletString += ` | ${evType}`;
-            }
+    function render(animate, dir) {
+      const f = filters(), today = todayKey();
+      state.reg = { groups: {} };
+      el.grid.classList.toggle('noanim', !animate);
+      el.grid.style.setProperty('--dx', animate && dir ? (dir > 0 ? '60px' : '-60px') : '0px');
+      el.grid.innerHTML = buildGrid(state.events, state.weekStart, today, f, state.reg);
+      const end = keyAdd(state.weekStart, 6);
+      el.weekNo.textContent = 'WEEK ' + isoWeek(state.weekStart) + (state.weekStart === mondayOf(today) ? ' · CURRENT' : '');
+      el.weekRange.textContent = rangeLabel(state.weekStart, end);
+      el.printTitle.innerHTML = `Independence Hotel | F&amp;B Banquet Dashboard<small>Week ${isoWeek(state.weekStart)} · ${esc(rangeLabel(state.weekStart, end))}</small>`;
+      const s = weekStats(state.events, state.weekStart, f);
+      countUp(el.stAll, s.all); countUp(el.stConf, s.conf); countUp(el.stPros, s.pros);
+    }
 
-            document.getElementById('modalTitle').innerText = (ev.groupName || 'UNNAMED EVENT').toUpperCase();
-            document.getElementById('modalDate').innerText = `📅 ${displayDate} | ⏰ ${ev.time}`;
-            document.getElementById('modalCode').innerText = ev.reservationCode || 'N/A';
-            document.getElementById('modalVenue').innerText = outletString;
-            document.getElementById('modalPax').innerText = ev.pax || 'TBA';
-            document.getElementById('modalStatus').innerText = ev.status || 'UNKNOWN';
-            
-            const isConfirmed = (ev.status || '').toLowerCase().includes('confirm');
-            document.getElementById('modalStatus').className = isConfirmed ? 'text-green-600 font-bold uppercase tracking-widest' : 'text-orange-500 font-bold uppercase tracking-widest';
+    function renderSkeleton() {
+      el.grid.classList.remove('noanim');
+      el.grid.innerHTML = Array.from({ length: 8 }, () => '<div class="sk"></div>').join('');
+    }
 
-            document.getElementById('eventModal').classList.add('active');
-        }
+    function go(weeks) { state.weekStart = keyAdd(state.weekStart, weeks * 7); state.follow = state.weekStart === mondayOf(todayKey()); render(true, weeks); }
 
-        function closeModal() {
-            document.getElementById('eventModal').classList.remove('active');
-        }
+    /* ----- Modal ----- */
+    function row(k, label, val, i) { return val ? `<div class="row" style="--k:${i}"><span>${label}</span><span>${val}</span></div>` : ''; }
+    function openModal(head, body) {
+      el.modal.innerHTML = `<button class="m-x" aria-label="Close">✕</button>${head}<div class="m-body">${body}<button class="m-close">Close Details</button></div>`;
+      el.modalBg.classList.add('open'); el.modalBg.setAttribute('aria-hidden', 'false');
+    }
+    function closeModal() { el.modalBg.classList.remove('open'); el.modalBg.setAttribute('aria-hidden', 'true'); }
+    const colors = { confirmed:'#15803d', prospect:'#b45309', cancelled:'#b91c1c', block:'#475569', none:'#1d4ed8', other:'#6d28d9' };
 
-        window.onclick = function(event) {
-            const modal = document.getElementById('eventModal');
-            if (event.target == modal) {
-                closeModal();
-            }
-        }
+    function openEvent(e) {
+      const sk = statusKey(e.status);
+      openModal(
+        `<div class="m-head" style="--c:${colors[sk]}"><h3>${esc(e.group)}</h3><p>📅 ${longDate(e.dateKey)} · ⏰ ${esc(fmtTime(e))}</p></div>`,
+        row('code', 'Res. Code', esc(e.code), 0) + row('v', 'Venue', esc(e.loc || 'TBA'), 1) + row('t', 'Type of event', esc(e.type), 2) +
+        row('p', 'Pax', esc(e.pax), 3) +
+        row('st', 'Status', `<span style="color:${colors[sk]}">${esc(statusLabel(sk, e.status))}</span>`, 4) +
+        row('r', 'Remark', esc(e.remark), 5)
+      );
+    }
+    function openGroup(key) {
+      const evs = state.reg.groups[key]; if (!evs) return;
+      const rows = evs.map((e, i) => `<div class="g-row" style="--k:${i}"><b>${longDate(e.dateKey)} · ${esc(fmtTime(e))}</b>📍 ${esc(e.loc || 'TBA')}${e.type ? ' · ' + esc(oneLine(e.type)) : ''}${e.pax ? ' · 👥 ' + esc(oneLine(e.pax)) : ''}</div>`).join('');
+      openModal(`<div class="m-head" style="--c:#15803d"><h3>${esc(evs[0].group)}</h3><p>🟢 Confirmed · ${evs.length} event${evs.length > 1 ? 's' : ''} next week</p></div>`, rows);
+    }
 
-        // Initialize Call
-        fetchEvents();
-    </script>
+    /* ----- Data ----- */
+    function showError(msg) {
+      el.err.hidden = false;
+      el.err.innerHTML = `❌ <strong>Connection error:</strong> ${esc(msg)}${state.events.length ? ' — showing last saved data.' : ''}<br><small>សូមប្រាកដថា Google Script Web App ត្រូវបានសិទ្ធិជា 'Anyone' និង URL ត្រឹមត្រូវ។</small>`;
+    }
+    const clock = d => new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }).format(d);
+
+    async function fetchEvents() {
+      el.btnRefresh.classList.add('loading');
+      try {
+        const r = await fetch(API_URL, { redirect: 'follow' });
+        if (!r.ok) throw new Error('Network response failed: ' + r.status);
+        const json = await r.json();
+        if (!Array.isArray(json)) throw new Error(json && json.error ? json.error : 'Unexpected response format');
+        state.events = normalize(json);
+        state.updated = new Date();
+        el.updated.textContent = 'Updated ' + clock(state.updated);
+        el.err.hidden = true;
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify(json)); } catch (_) {}
+        render(true);
+      } catch (e) {
+        showError(e.message || e);
+        if (!state.events.length) el.grid.innerHTML = '';
+      } finally {
+        el.btnRefresh.classList.remove('loading');
+      }
+    }
+
+    /* ----- Events ----- */
+    el.btnPrev.onclick = () => go(-1);
+    el.btnNext.onclick = () => go(1);
+    el.btnToday.onclick = () => { const w = mondayOf(todayKey()); const dir = w > state.weekStart ? 1 : -1; state.weekStart = w; state.follow = true; render(true, dir); };
+    el.btnRefresh.onclick = fetchEvents;
+    el.btnPrint.onclick = () => window.print();
+    [el.q].forEach(n => n.addEventListener('input', () => render(false)));
+    [el.venue, el.status, el.showAll].forEach(n => n.addEventListener('change', () => render(false)));
+
+    el.grid.addEventListener('click', ev => {
+      const c = ev.target.closest('[data-ev]'); if (c) return openEvent(state.events[+c.dataset.ev]);
+      const g = ev.target.closest('[data-grp]'); if (g) openGroup(g.dataset.grp);
+    });
+    el.grid.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { const t = ev.target.closest('[data-ev],[data-grp]'); if (t) { ev.preventDefault(); t.click(); } } });
+    el.modalBg.addEventListener('click', ev => { if (ev.target === el.modalBg || ev.target.closest('.m-x') || ev.target.closest('.m-close')) closeModal(); });
+    document.addEventListener('keydown', ev => {
+      if (ev.key === 'Escape') closeModal();
+      else if (!el.modalBg.classList.contains('open') && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) {
+        if (ev.key === 'ArrowLeft') go(-1); else if (ev.key === 'ArrowRight') go(1);
+      }
+    });
+
+    // Roll over at midnight and keep data fresh
+    let lastToday = todayKey();
+    setInterval(() => {
+      const t = todayKey();
+      if (t !== lastToday) { lastToday = t; if (state.follow) state.weekStart = mondayOf(t); render(false); }
+    }, 30000);
+    setInterval(fetchEvents, 5 * 60 * 1000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && (!state.updated || Date.now() - state.updated > 120000)) fetchEvents(); });
+
+    /* ----- Start: show cached data instantly, then refresh ----- */
+    let cached = null;
+    try { cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch (_) {}
+    if (Array.isArray(cached) && cached.length) { state.events = normalize(cached); render(true); } else { renderSkeleton(); }
+    fetchEvents();
+  }
+
+  if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
 </body>
 </html>
