@@ -28,7 +28,7 @@
             INDEPENDENCE HOTEL | F&B BANQUET DASHBOARD
         </h1>
         
-        <!-- Right Action Buttons (z-index ensure it stays clickable above the absolute title) -->
+        <!-- Right Action Buttons -->
         <div class="ml-auto z-10 flex space-x-4">
             <button class="px-4 py-2 bg-blue-700 text-white rounded font-semibold shadow hover:bg-blue-600 transition duration-300" onclick="fetchEvents()">🔄 Refresh Data</button>
             <button class="bg-white text-blue-900 px-4 py-2 rounded font-semibold shadow hover:bg-blue-100 transition duration-300" onclick="window.print()">🖨️ Export PDF</button>
@@ -42,8 +42,11 @@
         <div class="bg-white p-4 rounded-lg shadow-sm border mb-6">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 
-                <!-- 1. Date Range Filter -->
-                <select id="dateFilter" class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition" onchange="toggleDateRange(); renderEvents();">
+                <!-- 1. Search Box (New) -->
+                <input type="text" id="searchFilter" placeholder="🔍 Search Group Name..." class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition lg:col-span-1" onkeyup="renderEvents()">
+
+                <!-- 2. Date Range Filter -->
+                <select id="dateFilter" class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition lg:col-span-1" onchange="toggleDateRange(); renderEvents();">
                     <option value="all">📅 All Dates</option>
                     <option value="this_week">📅 This Week (Next 7 Days)</option>
                     <option value="this_month">📅 This Month</option>
@@ -57,15 +60,15 @@
                     <input type="date" id="endDate" class="border p-2 rounded text-gray-700 w-full" onchange="renderEvents()">
                 </div>
 
-                <!-- 2. Status Filter -->
-                <select id="statusFilter" class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition" onchange="renderEvents()">
+                <!-- 3. Status Filter -->
+                <select id="statusFilter" class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition lg:col-span-1" onchange="renderEvents()">
                     <option value="all">✅ All Events</option>
                     <option value="confirmed">🟢 Confirmed Group Only</option>
                     <option value="unconfirmed">🟠 All Unconfirmed Status</option>
                 </select>
 
-                <!-- 3. Venue Filter -->
-                <select id="venueFilter" class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition" onchange="renderEvents()">
+                <!-- 4. Venue Filter -->
+                <select id="venueFilter" class="border p-2 rounded text-gray-700 w-full focus:ring-2 focus:ring-blue-500 transition lg:col-span-1" onchange="renderEvents()">
                     <option value="all">📍 All Venues</option>
                     <option value="hibiscus">Hibiscus Room</option>
                     <option value="camellia">Camellia Room</option>
@@ -83,7 +86,7 @@
 
         <!-- Event List View -->
         <div class="bg-white shadow rounded-lg p-6 min-h-[400px]">
-            <div id="eventContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div id="eventContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 <div class="col-span-full text-center py-12">
                     <div class="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-blue-600 rounded-full" role="status"></div>
                     <p class="mt-2 text-gray-500 font-medium">Loading events from Google Sheets...</p>
@@ -109,7 +112,7 @@
     </div>
 
     <script>
-        // ⚠️ ប្តូរ URL ខាងក្រោមទៅជា URL Web App របស់លោក
+        // ⚠️ ប្តូរ URL ខាងក្រោមទៅជា URL Web App របស់លោកដដែល
         const API_URL = 'https://script.google.com/macros/s/AKfycbw1F7SsSLEazvkYlZ0RZZ3D7Xzu8heAJh8xYBEQx5bB6WSkejYVY6jDJJrmqy9DdZVN4g/exec';
         let eventsData = [];
 
@@ -150,6 +153,9 @@
 
         function renderEvents() {
             const container = document.getElementById('eventContainer');
+            
+            // យកតម្លៃពីគ្រប់ Filter ទាំងអស់
+            const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
             const venueFilter = document.getElementById('venueFilter').value.toLowerCase();
             const statusFilter = document.getElementById('statusFilter').value;
             const dateFilter = document.getElementById('dateFilter').value;
@@ -165,15 +171,18 @@
 
             const filteredEvents = eventsData.filter(ev => {
                 
-                // 1. ចម្រោះតាម ទីតាំង (Venue)
+                // 1. ចម្រោះតាម Search Box (Group Name)
+                if (searchFilter && (!ev.groupName || !ev.groupName.toLowerCase().includes(searchFilter))) return false;
+
+                // 2. ចម្រោះតាម ទីតាំង (Venue)
                 if (venueFilter !== 'all' && !ev.location.toLowerCase().includes(venueFilter)) return false;
                 
-                // 2. ចម្រោះតាម Status
+                // 3. ចម្រោះតាម Status
                 const isConfirmed = ev.status.includes('confirm');
                 if (statusFilter === 'confirmed' && !isConfirmed) return false;
                 if (statusFilter === 'unconfirmed' && isConfirmed) return false;
 
-                // 3. ចម្រោះតាម កាលបរិច្ឆេទ (Date Range)
+                // 4. ចម្រោះតាម កាលបរិច្ឆេទ (Date Range)
                 if(!ev.date) return false;
                 const evDate = new Date(ev.date);
                 evDate.setHours(0,0,0,0);
@@ -202,77 +211,50 @@
             filteredEvents.forEach((ev, index) => {
                 const isConfirmed = ev.status.includes('confirm');
                 const bgColor = isConfirmed ? 'bg-green-50 border-green-500' : 'bg-orange-50 border-orange-400';
-                const badgeColor = isConfirmed ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800';
+                const badgeColor = isConfirmed ? 'bg-green-100 text-green-800 border-green-200' : 'bg-orange-100 text-orange-800 border-orange-200';
 
-                let displayDate = "TBA";
+                let fullDateStr = "TBA";
+                let bigDay = "--";
+                let bigMonth = "";
+
                 if(ev.date) {
                     const d = new Date(ev.date);
-                    if(!isNaN(d)) displayDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                    if(!isNaN(d)) {
+                        fullDateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                        bigDay = d.getDate();
+                        bigMonth = d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase();
+                    }
                 }
 
                 const card = document.createElement('div');
-                // បញ្ចូល Animation Class និង Delay
-                card.className = `border-l-4 p-5 rounded-lg shadow cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-300 animate-fade-in-up ${bgColor}`;
-                card.style.opacity = '0';
-                card.style.animationDelay = `${index * 0.05}s`; 
+                // ប្រើ Relative class ដើម្បីអាចអណ្តែត Big Date លើ Card បាន
+                card.className = `relative border-l-4 p-5 rounded-lg shadow-sm cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-300 animate-fade-in-up flex flex-col ${bgColor}`; card.style.opacity = '0'; card.style.animationDelay = `${index * 0.05}s`; 
                 card.onclick = () => openModal(index, filteredEvents);
                 
                 card.innerHTML = `
-                    <div class="flex justify-between items-start mb-3">
-                        <h4 class="font-bold text-lg text-blue-900 leading-tight flex-1 pr-2">${ev.groupName || 'Unnamed Event'}</h4>
+                    <!-- Big Date on Top Right -->
+                    <div class="absolute top-4 right-5 text-center flex flex-col items-center">
+                        <span class="text-3xl font-black text-blue-900 leading-none">${bigDay}</span>
+                        <span class="text-xs font-bold text-gray-500 tracking-widest mt-1">${bigMonth}</span>
                     </div>
-                    <p class="text-sm text-gray-700 font-medium mb-1.5 flex items-center">
-                        📅 <span class="ml-2">${displayDate}</span> <span class="mx-2 text-gray-300">|</span> ⏰ <span>${ev.time}</span>
-                    </p>
-                    <p class="text-sm text-gray-700 mb-4 flex items-start">
-                        📍 <span class="ml-2 leading-snug">${ev.location || 'TBA'}</span> 
-                    </p>
-                    <div class="flex justify-between items-center mt-auto border-t pt-3">
-                        <span class="text-xs font-bold px-3 py-1.5 rounded uppercase tracking-wide ${badgeColor}">${ev.status || 'NO STATUS'}</span>
-                        <span class="text-sm font-semibold text-gray-600 bg-white px-2 py-1 rounded border shadow-sm">👥 Pax: ${ev.pax || '?'}</span>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
 
-        function openModal(index, dataArray) {
-            const ev = dataArray[index];
-            
-            let displayDate = "TBA";
-            if(ev.date) {
-                const d = new Date(ev.date);
-                if(!isNaN(d)) displayDate = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-            }
+                    <!-- Card Content (Added pr-16 to avoid overlapping with big date) -->
+                    <div class="pr-16 flex-grow">
+                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">GROUP NAME:</p>
+                        <h4 class="font-bold text-lg text-blue-900 leading-tight mb-4">${ev.groupName || 'Unnamed Event'}</h4>
+                        
+                        <p class="text-sm text-gray-700 mb-2">
+                            <span class="font-bold text-gray-900 uppercase text-xs tracking-wider inline-block w-16">OUTLET:</span> 
+                            <span class="font-medium">${ev.location || 'TBA'}</span>
+                        </p>
+                        
+                        <p class="text-sm text-gray-700 mb-2">
+                            <span class="font-bold text-gray-900 uppercase text-xs tracking-wider inline-block w-16">DATE:</span> 
+                            <span class="font-medium text-blue-700">${fullDateStr}</span> 
+                            <span class="mx-1 text-gray-300">|</span> 
+                            <span class="font-bold text-gray-900 uppercase text-xs tracking-wider">TIME:</span> 
+                            <span class="font-medium">${ev.time || 'TBA'}</span>
+                        </p>
 
-            document.getElementById('modalTitle').innerText = ev.groupName || 'Unnamed Event';
-            document.getElementById('modalDate').innerText = `📅 ${displayDate} | ⏰ ${ev.time}`;
-            document.getElementById('modalCode').innerText = ev.reservationCode || 'N/A';
-            document.getElementById('modalVenue').innerText = ev.location || 'TBA';
-            document.getElementById('modalPax').innerText = ev.pax || 'TBA';
-            document.getElementById('modalType').innerText = ev.type || 'N/A';
-            document.getElementById('modalStatus').innerText = ev.status || 'UNKNOWN';
-            
-            const isConfirmed = ev.status.includes('confirm');
-            document.getElementById('modalStatus').className = isConfirmed ? 'text-green-600 font-bold uppercase tracking-wider' : 'text-orange-500 font-bold uppercase tracking-wider';
-
-            document.getElementById('eventModal').classList.add('active');
-        }
-
-        function closeModal() {
-            document.getElementById('eventModal').classList.remove('active');
-        }
-
-        // Close modal when clicking outside of it
-        window.onclick = function(event) {
-            const modal = document.getElementById('eventModal');
-            if (event.target == modal) {
-                closeModal();
-            }
-        }
-
-        // Fetch data on load
-        fetchEvents();
-    </script>
-</body>
-</html>
+                        <p class="text-sm text-gray-700 mb-4">
+                            <span class="font-bold text-gray-
